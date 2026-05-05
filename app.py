@@ -465,8 +465,8 @@ elif menu == "บันทึกข้อมูลการผลิต":
                     od = c2.number_input("เส้นผ่านศูนย์กลาง (OD) [mm]", min_value=0.0)
                     u_vol = math.pi * ((od/2)**2) * height
                 else:
-                    od = c2.number_input("OD [mm]", min_value=0.0)
-                    thickness = c2.number_input("ความหนาเนื้อ [mm]", min_value=0.0)
+                    od = c2.number_input("เส้นผ่านศูนย์กลาง (OD) [mm]", min_value=0.0)
+                    thickness = c2.number_input("ความหนาของเนื้อชิ้นงาน [mm]", min_value=0.0)
                     id_inner = max(0.0, od - (2*thickness))
                     u_vol = math.pi * ((od/2)**2 - (id_inner/2)**2) * height
 
