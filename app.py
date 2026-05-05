@@ -296,7 +296,7 @@ if menu == "Dashboard":
             with st.expander(f"ดูประวัติข้อมูลดิบของ {selected_tank}"):
                 st.dataframe(tank_df[["recorded_at", "ph_value", "temperature"]].sort_values("recorded_at", ascending=False), use_container_width=True)
 
-# =========================================================
+    # =========================================================
     # ================= ANODIZE TREND ANALYSIS ================
     # =========================================================
     st.markdown("---")
@@ -312,6 +312,7 @@ if menu == "Dashboard":
         tank_map = load_tanks()
         inv_map = {v: k for k, v in tank_map.items()}
         df_a["tank_name"] = df_a["tank_id"].map(inv_map)
+        
             # ================= ALERT TABLE =================
         st.subheader("🚨 ตารางแจ้งเตือนบ่ออโนไดซ์")
 
