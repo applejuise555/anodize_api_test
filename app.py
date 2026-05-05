@@ -361,7 +361,7 @@ elif menu == "บันทึกข้อมูลการผลิต":
         with sub_jig:
             st.subheader("เพิ่มรหัสจิ๊กใหม่")
             with st.form("add_jig_fixed", clear_on_submit=True):
-                j_code = st.text_input("รหัสจิ๊ก", key="j_code_input").strip()
+                j_code = st.text_input("รหัสจิ๊ก(ปปปปดดวว จิ๊กที่เท่าไหร่ เช่น 20260501001)", key="j_code_input").strip()
                 if st.form_submit_button("ลงทะเบียนจิ๊ก"):
                     if j_code:
                         check_jig = supabase.table("jigs").select("jig_model_code").eq("jig_model_code", j_code).execute()
