@@ -415,24 +415,39 @@ elif menu == "บันทึกข้อมูลการผลิต":
                                     c2.metric("ปริมาตรรวม (mm³)", f"{total_vol:,.2f}")
                                     if st.form_submit_button("💾 บันทึก"):
                                         try:
+                                            # 1. บันทึกข้อมูลลงในตาราง Log (ประวัติการใช้งาน)
                                             supabase.table("jig_usage_log").insert({
-                                                "product_id": selected_prod_id, "jig_id": jig_id, 
-                                                "color": sel_c_new, "tank_id": filtered_tanks[sel_tank_name], 
-                                                "total_pieces": total_pcs, "total_volume": total_vol, 
+                                                "product_id": selected_prod_id, 
+                                                "jig_id": jig_id, 
+                                                "color": sel_c_new, 
+                                                "tank_id": filtered_tanks[sel_tank_name], 
+                                                "total_pieces": total_pcs, 
+                                                "total_volume": total_vol, 
                                                 "recorded_date": datetime.now(ICT).isoformat(),
                                                 "rows_filled": rows, 
                                                 "partial_pieces": partial,
                                                 "pcs_per_row": pcs
                                             }).execute()
+
+                                            # 2. อัปเดตสถานะในตาราง jig_status (สำหรับ Dashboard)
                                             supabase.table("jig_status").upsert({
-                                                "jig_id": jig_id, "status_type": "In-Process", 
+                                                "jig_id": jig_id, 
+                                                "status_type": "In-Process", 
                                                 "current_tank_id": filtered_tanks[sel_tank_name], 
                                                 "updated_at": datetime.now(ICT).isoformat()
                                             }).execute()
-                                            st.success("บันทึกสำเร็จ")
+
+                                            # --- ส่วนที่เพิ่มใหม่: 3. อัปเดตจำนวนชิ้นงานในตาราง jigs ---
+                                            supabase.table("jigs").update({
+                                                "total_pcs_in_jig": total_pcs
+                                            }).eq("jig_id", jig_id).execute()
+
+                                            st.success(f"✅ บันทึกสำเร็จ: อัปเดตจำนวน {total_pcs} ชิ้นลงในจิ๊กเรียบร้อย")
+                                            time.sleep(1) # ให้ User เห็นข้อความ Success แป๊บหนึ่ง
                                             st.rerun()
+
                                         except Exception as e:
-                                            st.error(f"เกิดข้อผิดพลาด: {str(e)}")
+                                            st.error(f"เกิดข้อผิดพลาดในการบันทึก: {str(e)}")
                         elif action == "🟢 เสร็จสิ้นงาน":
                             if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
                                 supabase.table("jig_status").upsert({"jig_id": jig_id, "status_type": "Finished", "current_tank_id": None, "updated_at": datetime.now(ICT).isoformat()}).execute()
