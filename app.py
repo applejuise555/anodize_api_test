@@ -449,7 +449,10 @@ elif menu == "บันทึกข้อมูลการผลิต":
                                         except Exception as e:
                                             st.error(f"เกิดข้อผิดพลาดในการบันทึก: {str(e)}")
                         elif action == "🟢 เสร็จสิ้นงาน":
-                            check_log = supabase.table("jig_usage_log").select("id").eq("jig_id", jig_id).limit(1).execute()
+                            try:
+                                check_log = supabase.table("jig_usage_log").select("*").eq("jig_id", jig_id).limit(1).execute()
+                            except Exception as e:
+                                st.error(f"รายละเอียด Error: {e}") # ตรงนี้จะบอกชัดเจนว่าหาคอลัมน์ไม่เจอ หรือติด RLS
     
                             if not check_log.data:
                                 st.warning("⚠️ ไม่สามารถปิดงานได้: จิ๊กนี้ยังไม่มีการบันทึกข้อมูลการผลิต (กรุณาบันทึกงานต่อก่อน)")
