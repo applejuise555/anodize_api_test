@@ -33,7 +33,6 @@ TANK_COLOR_MAP = {
     "HotSealH60": "Black"
 }
 
-
 # --- เชื่อมต่อ Supabase ---
 @st.cache_resource
 def init_connection():
@@ -72,6 +71,7 @@ def get_options(table, id_col, name_col, filter_col=None, filter_val=None):
         return {item[name_col]: item[id_col] for item in response.data}
     except Exception:
         return {}
+
 def get_status_icon(value, min_val, max_val, warn_margin=0.1):
     if value is None:
         return "⚪"
@@ -80,6 +80,7 @@ def get_status_icon(value, min_val, max_val, warn_margin=0.1):
     elif value < (min_val + warn_margin) or value > (max_val - warn_margin):
         return "🟡"
     return "🟢"
+
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
 # ================= DASHBOARD (FULL SYSTEM VIEW) =================
@@ -89,9 +90,9 @@ if menu == "Dashboard":
     # ================= STANDARD =================
     PH_MIN, PH_MAX = 5.0, 6.0
     TEMP_COLOR_MIN, TEMP_COLOR_MAX = 30, 40
-    PH_ANO_MIN, PH_ANO_MAX = 1, 1.5       # <--- เพิ่มบรรทัดนี้ (ปรับค่าตามมาตรฐานจริงของคุณ)
-    TEMP_ANO_MIN, TEMP_ANO_MAX = 18, 22     # มาตรฐานอุณหภูมิ บ่ออโนไดซ์
-    DEN_ANO_MIN, DEN_ANO_MAX = 0.5, 1.5  #เพิ่มค่ามาตรฐาน Density (ปรับตัวเลขตาม Spec ของสารเคมีที่โรงงานใช้)
+    PH_ANO_MIN, PH_ANO_MAX = 1, 1.5
+    TEMP_ANO_MIN, TEMP_ANO_MAX = 18, 22
+    DEN_ANO_MIN, DEN_ANO_MAX = 0.5, 1.5
 
     # ================= CACHE & DATA LOADING =================
     @st.cache_data(ttl=10)
@@ -119,7 +120,7 @@ if menu == "Dashboard":
     col2.metric("🧪 บ่อที่กำลังใช้งาน", active_tanks_count)
     st.markdown("---")
 
-# --- Color Tank Analysis ---
+    # --- Color Tank Analysis ---
     st.subheader("🎨 วิเคราะห์ข้อมูลบ่อสี (Color Tanks)")
     logs = load_color_logs()
     if logs:
@@ -131,10 +132,7 @@ if menu == "Dashboard":
 
         latest = df.drop_duplicates("tank_id").copy()
         if not latest.empty:
-            # สร้าง Subplots แบบ 2 แกน Y (ซ้าย pH, ขวา Temp)
             fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-            # 1. กราฟแท่ง pH (แกนซ้าย)
             fig.add_trace(
                 go.Bar(
                     x=latest["tank_name"],
@@ -143,12 +141,10 @@ if menu == "Dashboard":
                     marker_color="#98FB98",
                     text=latest["ph_value"],
                     textposition='auto',
-                    offsetgroup=1, # จัดกลุ่มที่ 1
+                    offsetgroup=1,
                 ),
                 secondary_y=False,
             )
-
-            # 2. กราฟแท่ง อุณหภูมิ (แกนขวา)
             fig.add_trace(
                 go.Bar(
                     x=latest["tank_name"],
@@ -157,252 +153,123 @@ if menu == "Dashboard":
                     marker_color="#AFEEEE",
                     text=latest["temperature"],
                     textposition='auto',
-                    offsetgroup=2, # จัดกลุ่มที่ 2 (ทำให้แท่งวางข้างกัน)
+                    offsetgroup=2,
                 ),
                 secondary_y=True,
             )
-
-            # --- ตั้งค่าแกน Y ---
-            fig.update_yaxes(
-                title_text="<b>ค่า pH</b>", 
-                secondary_y=False, 
-                range=[0, 14], 
-                dtick=1,
-                title_font=dict(color="#22c55e"),
-                tickfont=dict(color="#22c55e"),
-                gridcolor='rgba(34, 197, 94, 0.1)' # เส้นกริดจางๆ ตามสีแกน
-            )
-            
-            fig.update_yaxes(
-                title_text="<b>อุณหภูมิ (°C)</b>", 
-                secondary_y=True, 
-                range=[0, 100],
-                title_font=dict(color="#3b82f6"),
-                tickfont=dict(color="#3b82f6"),
-                showgrid=False # ปิดกริดฝั่งขวาเพื่อไม่ให้ลายตา
-            )
-
-            # --- เพิ่มเส้น Threshold (เส้นเกณฑ์มาตรฐาน) ---
-            # เส้น pH
+            fig.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14], dtick=1, title_font=dict(color="#22c55e"), tickfont=dict(color="#22c55e"), gridcolor='rgba(34, 197, 94, 0.1)')
+            fig.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100], title_font=dict(color="#3b82f6"), tickfont=dict(color="#3b82f6"), showgrid=False)
             fig.add_hline(y=PH_MIN, line_dash="dash", line_color="#166534", secondary_y=False)
             fig.add_hline(y=PH_MAX, line_dash="dash", line_color="#166534", secondary_y=False)
-            
-            # เส้น Temp
             fig.add_hline(y=TEMP_COLOR_MIN, line_dash="dot", line_color="#1d4ed8", secondary_y=True)
             fig.add_hline(y=TEMP_COLOR_MAX, line_dash="dot", line_color="#1d4ed8", secondary_y=True)
-
-            # การตั้งค่า Layout
-            fig.update_layout(
-                title=dict(text="เปรียบเทียบค่า pH และอุณหภูมิ (ล่าสุดรายบ่อ)", x=0.5),
-                xaxis_title="ชื่อบ่อสี",
-                barmode="group", # คำสั่งสำคัญที่ทำให้แท่งวางคู่กัน
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                height=500,
-                margin=dict(t=100) # เพิ่มพื้นที่ด้านบนให้ Legend
-            )
-
+            fig.update_layout(title=dict(text="เปรียบเทียบค่า pH และอุณหภูมิ (ล่าสุดรายบ่อ)", x=0.5), xaxis_title="ชื่อบ่อสี", barmode="group", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), height=500, margin=dict(t=100))
             st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("🚨 ตารางแจ้งเตือนบ่อสี")
+        st.subheader("🚨 ตารางแจ้งเตือนบ่อสี")
+        alert_data = []
+        for _, row in latest.iterrows():
+            alert_data.append({
+                "Tank": row["tank_name"],
+                "pH": f"{get_status_icon(row['ph_value'], PH_MIN, PH_MAX)} {row['ph_value']:.2f}",
+                "Temp (°C)": f"{get_status_icon(row['temperature'], TEMP_COLOR_MIN, TEMP_COLOR_MAX)} {row['temperature']:.1f}"
+            })
+        st.dataframe(pd.DataFrame(alert_data), use_container_width=True)
 
-    alert_data = []
-
-    for _, row in latest.iterrows():
-        tank = row["tank_name"]
-
-        ph = row["ph_value"]
-        temp = row["temperature"]
-
-        alert_data.append({
-            "Tank": tank,
-            "pH": f"{get_status_icon(ph, PH_MIN, PH_MAX)} {ph:.2f}",
-            "Temp (°C)": f"{get_status_icon(temp, TEMP_COLOR_MIN, TEMP_COLOR_MAX)} {temp:.1f}"
-    })
-
-    alert_df = pd.DataFrame(alert_data)
-
-    st.dataframe(alert_df, use_container_width=True)
-    # =========================================================
     # ================= INDIVIDUAL TANK VIEW =================
-    # =========================================================
     st.markdown("---")
     st.subheader("🔍 วิเคราะห์ข้อมูลรายบ่อ (Individual Tank Analysis)")
-
-    # ดึงรายชื่อบ่อสีที่มีใน logs มาให้เลือก
     if logs:
         df_all = pd.DataFrame(logs)
         df_all["recorded_at"] = pd.to_datetime(df_all["recorded_at"])
-        
-        # สร้าง Mapping ชื่อบ่อ
         tank_map = load_tanks()
         inv_map = {v: k for k, v in tank_map.items()}
         df_all["tank_name"] = df_all["tank_id"].map(inv_map)
-        
-        # ตัวเลือกบ่อ
         available_tanks = sorted(df_all["tank_name"].unique())
         selected_tank = st.selectbox("เลือกบ่อที่ต้องการดูรายละเอียด", available_tanks)
-
-        # กรองข้อมูลเฉพาะบ่อที่เลือก
         tank_df = df_all[df_all["tank_name"] == selected_tank].sort_values("recorded_at")
 
         if not tank_df.empty:
-            # สร้าง Column สำหรับกราฟ 2 ฝั่ง (pH และ Temp)
             g1, g2 = st.columns(2)
-
             with g1:
                 fig_ph = go.Figure()
-                fig_ph.add_trace(go.Scatter(
-                    x=tank_df["recorded_at"],
-                    y=tank_df["ph_value"],
-                    mode='lines+markers',
-                    name='pH Value',
-                    line=dict(color='#22c55e', width=3),
-                    marker=dict(size=8)
-                ))
-                # เพิ่มเส้นขอบเขตมาตรฐาน
+                fig_ph.add_trace(go.Scatter(x=tank_df["recorded_at"], y=tank_df["ph_value"], mode='lines+markers', name='pH Value', line=dict(color='#22c55e', width=3), marker=dict(size=8)))
                 fig_ph.add_hrect(y0=PH_MIN, y1=PH_MAX, fillcolor="green", opacity=0.1, line_width=0, annotation_text="Standard Range")
-                
-                fig_ph.update_layout(
-                    title=f"แนวโน้มค่า pH: {selected_tank}",
-                    xaxis_title="เวลาที่บันทึก",
-                    yaxis_title="pH",
-                    hovermode="x unified"
-                )
+                fig_ph.update_layout(title=f"แนวโน้มค่า pH: {selected_tank}", xaxis_title="เวลาที่บันทึก", yaxis_title="pH", hovermode="x unified")
                 st.plotly_chart(fig_ph, use_container_width=True)
-
             with g2:
                 fig_temp = go.Figure()
-                fig_temp.add_trace(go.Scatter(
-                    x=tank_df["recorded_at"],
-                    y=tank_df["temperature"],
-                    mode='lines+markers',
-                    name='Temperature',
-                    line=dict(color='#22c55e', width=3),
-                    marker=dict(size=8)
-                ))
-                # เพิ่มเส้นขอบเขตมาตรฐาน
+                fig_temp.add_trace(go.Scatter(x=tank_df["recorded_at"], y=tank_df["temperature"], mode='lines+markers', name='Temperature', line=dict(color='#22c55e', width=3), marker=dict(size=8)))
                 fig_temp.add_hrect(y0=TEMP_COLOR_MIN, y1=TEMP_COLOR_MAX, fillcolor="orange", opacity=0.1, line_width=0, annotation_text="Standard Range")
-                
-                fig_temp.update_layout(
-                    title=f"แนวโน้มอุณหภูมิ: {selected_tank}",
-                    xaxis_title="เวลาที่บันทึก",
-                    yaxis_title="อุณหภูมิ (°C)",
-                    hovermode="x unified"
-                )
+                fig_temp.update_layout(title=f"แนวโน้มอุณหภูมิ: {selected_tank}", xaxis_title="เวลาที่บันทึก", yaxis_title="อุณหภูมิ (°C)", hovermode="x unified")
                 st.plotly_chart(fig_temp, use_container_width=True)
-            
-            # แสดงตารางข้อมูลล่าสุดของบ่อนี้
             with st.expander(f"ดูประวัติข้อมูลดิบของ {selected_tank}"):
                 st.dataframe(tank_df[["recorded_at", "ph_value", "temperature"]].sort_values("recorded_at", ascending=False), use_container_width=True)
 
-    # =========================================================
     # ================= ANODIZE TREND ANALYSIS ================
-    # =========================================================
     st.markdown("---")
     st.subheader("📈 วิเคราะห์แนวโน้มบ่ออโนไดซ์ (Anodize Detailed Trend)")
-
     logs_a = load_anodize_logs()
-
     if logs_a:
         df_a = pd.DataFrame(logs_a)
         df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"])
-        
-        # Mapping ชื่อบ่อ
         tank_map = load_tanks()
         inv_map = {v: k for k, v in tank_map.items()}
         df_a["tank_name"] = df_a["tank_id"].map(inv_map)
         
-            # ================= ALERT TABLE =================
         st.subheader("🚨 ตารางแจ้งเตือนบ่ออโนไดซ์")
-
         latest_ano = df_a.sort_values("recorded_at").groupby("tank_name").tail(1)
-
         alert_ano = []
-
         for _, row in latest_ano.iterrows():
             alert_ano.append({
                 "Tank": row["tank_name"],
                 "pH": f"{get_status_icon(row['ph_value'], PH_ANO_MIN, PH_ANO_MAX)} {row['ph_value']:.2f}",
                 "Temp": f"{get_status_icon(row['temperature'], TEMP_ANO_MIN, TEMP_ANO_MAX)} {row['temperature']:.1f}",
                 "Density": f"{get_status_icon(row['density'], DEN_ANO_MIN, DEN_ANO_MAX)} {row['density']:.3f}"
-        })
-
+            })
         st.dataframe(pd.DataFrame(alert_ano), use_container_width=True)
+
         available_ano_tanks = sorted(df_a["tank_name"].dropna().unique())
         selected_ano = st.selectbox("เลือกบ่ออโนไดซ์เพื่อดูแนวโน้ม", available_ano_tanks)
-        # กรองข้อมูล
         ano_filtered = df_a[df_a["tank_name"] == selected_ano].sort_values("recorded_at")
 
         if not ano_filtered.empty:
-            # สร้าง 3 คอลัมน์สำหรับ 3 กราฟ
             g1, g2, g3 = st.columns(3)
-
-            # --- กราฟที่ 1: pH ---
             with g1:
                 fig_ph = go.Figure()
-                fig_ph.add_trace(go.Scatter(
-                    x=ano_filtered["recorded_at"], y=ano_filtered["ph_value"],
-                    mode='lines+markers', name='pH',
-                    line=dict(color='#22c55e', width=2), marker=dict(size=6)
-                ))
+                fig_ph.add_trace(go.Scatter(x=ano_filtered["recorded_at"], y=ano_filtered["ph_value"], mode='lines+markers', name='pH', line=dict(color='#22c55e', width=2), marker=dict(size=6)))
                 fig_ph.add_hrect(y0=PH_ANO_MIN, y1=PH_ANO_MAX, fillcolor="green", opacity=0.1, line_width=0)
                 fig_ph.update_layout(title="แนวโน้ม pH", height=350, margin=dict(t=50, b=20, l=10, r=10))
                 st.plotly_chart(fig_ph, use_container_width=True)
-
-            # --- กราฟที่ 2: Temperature ---
             with g2:
                 fig_temp = go.Figure()
-                fig_temp.add_trace(go.Scatter(
-                    x=ano_filtered["recorded_at"], y=ano_filtered["temperature"],
-                    mode='lines+markers', name='Temp',
-                    line=dict(color='#3b82f6', width=2), marker=dict(size=6)
-                ))
+                fig_temp.add_trace(go.Scatter(x=ano_filtered["recorded_at"], y=ano_filtered["temperature"], mode='lines+markers', name='Temp', line=dict(color='#3b82f6', width=2), marker=dict(size=6)))
                 fig_temp.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.1, line_width=0)
                 fig_temp.update_layout(title="แนวโน้มอุณหภูมิ (°C)", height=350, margin=dict(t=50, b=20, l=10, r=10))
                 st.plotly_chart(fig_temp, use_container_width=True)
-
-            # --- กราฟที่ 3: Density ---
             with g3:
                 fig_den = go.Figure()
-                fig_den.add_trace(go.Scatter(
-                    x=ano_filtered["recorded_at"], y=ano_filtered["density"],
-                    mode='lines+markers', name='Density',
-                    line=dict(color='#a855f7', width=2), marker=dict(size=6)
-                ))
-                # ถ้ามีค่ามาตรฐาน Density (เช่น 1.05 - 1.10) สามารถเพิ่ม hrect ได้เหมือน pH
-                # ส่วนในกราฟ Density (g3)
+                fig_den.add_trace(go.Scatter(x=ano_filtered["recorded_at"], y=ano_filtered["density"], mode='lines+markers', name='Density', line=dict(color='#a855f7', width=2), marker=dict(size=6)))
                 fig_den.add_hrect(y0=DEN_ANO_MIN, y1=DEN_ANO_MAX, fillcolor="purple", opacity=0.1, line_width=0)
                 fig_den.update_layout(title="แนวโน้มความหนาแน่น", height=350, margin=dict(t=50, b=20, l=10, r=10))
                 st.plotly_chart(fig_den, use_container_width=True)
 
-            # --- ตาราง Log ข้อมูล ---
             with st.expander(f"📋 รายละเอียดข้อมูลบันทึก {selected_ano}"):
-                log_display = ano_filtered[["recorded_at", "ph_value", "temperature", "density"]].copy()
-                log_display = log_display.sort_values("recorded_at", ascending=False)
-                # จัดฟอร์แมตตัวเลขให้สวยงาม
-                st.dataframe(
-                    log_display.style.format({
-                        "ph_value": "{:.2f}",
-                        "temperature": "{:.1f}",
-                        "density": "{:.3f}"
-                    }), 
-                    use_container_width=True
-                )
+                log_display = ano_filtered[["recorded_at", "ph_value", "temperature", "density"]].sort_values("recorded_at", ascending=False)
+                st.dataframe(log_display.style.format({"ph_value": "{:.2f}", "temperature": "{:.1f}", "density": "{:.3f}"}), use_container_width=True)
         else:
             st.warning("ไม่พบข้อมูลบันทึกสำหรับบ่อนี้")
     else:
         st.info("ไม่มีข้อมูลในระบบ Anodize")
-    # ================= AUTO REFRESH =================
+
     try:
         st_autorefresh(interval=10000, key="refresh")
     except:
         pass
 
-
 # ================= RECORD PAGE =================
 elif menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล")
-    
     tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่ออโนไดซ์ (Anodize)", "งานจิ๊ก (Jig System)"])
 
     # --- Tab 1: บ่อสี ---
@@ -413,7 +280,6 @@ elif menu == "บันทึกข้อมูลการผลิต":
             selected_tank_name = st.selectbox("เลือกบ่อสี", list(color_tanks.keys()))
             detected_color = TANK_COLOR_MAP.get(selected_tank_name, "Black")
             render_color_bar(detected_color)
-            
             with st.form("color_log_form"):
                 ph = st.number_input("ค่า pH", step=0.1, format="%.2f")
                 temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
@@ -443,7 +309,7 @@ elif menu == "บันทึกข้อมูลการผลิต":
                     }).execute()
                     st.success("บันทึกข้อมูลอโนไดซ์สำเร็จ")
 
-# --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
+    # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
     with tab_main[2]:
         sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
 
@@ -456,7 +322,7 @@ elif menu == "บันทึกข้อมูลการผลิต":
                 p_name = c1.text_input("ชื่อสินค้า")
                 s_finish = c1.text_input("พื้นผิว *", value="-")
                 height = c2.number_input("ความยาว (H) [mm]", min_value=0.0)
-                width, thickness, od, u_vol = 0.0, 0.0, 0.0, 0.0
+                width, thickness, od, u_vol, id_inner = 0.0, 0.0, 0.0, 0.0, 0.0
                 if shape == "สี่เหลี่ยม":
                     width = c2.number_input("กว้าง [mm]", min_value=0.0)
                     thickness = c2.number_input("สูง/หนา [mm]", min_value=0.0)
@@ -473,24 +339,14 @@ elif menu == "บันทึกข้อมูลการผลิต":
                 st.info(f"💡 ปริมาตร: {u_vol:,.2f} mm³")
                 if st.form_submit_button("➕ ลงทะเบียนสินค้า"):
                     if p_code:
-                        # --- ส่วนตรวจสอบการซ้ำ ---
                         check_exist = supabase.table("products").select("product_code").eq("product_code", p_code).execute()
-                        
                         if check_exist.data:
-                            st.error(f"❌ รหัสสินค้า '{p_code}' นี้มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้")
+                            st.error(f"❌ รหัสสินค้า '{p_code}' นี้มีอยู่ในระบบแล้ว")
                         else:
                             payload = {
-                                "product_code": p_code, 
-                                "product_name": p_name, 
-                                "surface_finish": s_finish, 
-                                "unit_volume": u_vol, 
-                                "height": height, 
-                                "width": width, 
-                                "thickness": thickness, 
-                                "depth": thickness, 
-                                "shape": shape, 
-                                "outer_diameter": od, 
-                                "inner_diameter": id_inner if 'id_inner' in locals() else 0.0
+                                "product_code": p_code, "product_name": p_name, "surface_finish": s_finish, 
+                                "unit_volume": u_vol, "height": height, "width": width, "thickness": thickness, 
+                                "depth": thickness, "shape": shape, "outer_diameter": od, "inner_diameter": id_inner
                             }
                             supabase.table("products").insert(payload).execute()
                             st.success(f"✅ ลงทะเบียนรหัส {p_code} สำเร็จ!")
@@ -500,12 +356,10 @@ elif menu == "บันทึกข้อมูลการผลิต":
         with sub_jig:
             st.subheader("เพิ่มรหัสจิ๊กใหม่")
             with st.form("add_jig_fixed", clear_on_submit=True):
-                j_code = st.text_input("รหัสจิ๊ก(ตั้งรหัสเป็นปปปปดดววจิ๊กที่เท่าไหร่ เช่น 20260501001)", key="j_code_input").strip()
+                j_code = st.text_input("รหัสจิ๊ก", key="j_code_input").strip()
                 if st.form_submit_button("ลงทะเบียนจิ๊ก"):
                     if j_code:
-                        # --- ส่วนตรวจสอบการซ้ำ ---
                         check_jig = supabase.table("jigs").select("jig_model_code").eq("jig_model_code", j_code).execute()
-                        
                         if check_jig.data:
                             st.error(f"❌ รหัสจิ๊ก '{j_code}' นี้มีอยู่ในระบบแล้ว")
                         else:
@@ -515,17 +369,9 @@ elif menu == "บันทึกข้อมูลการผลิต":
                         st.error("กรุณากรอกรหัสจิ๊ก")
 
         with sub_log:
-            # 1. ดึงข้อมูลสินค้ามาทั้งหมด (เอาทั้ง ID, Code และ Name)
             prods_res = supabase.table("products").select("product_id, product_code, product_name").execute().data
-            
-            # 2. สร้าง Dictionary สำหรับ Mapping และ List สำหรับแสดงผลใน Selectbox
             if prods_res:
-                # สร้างข้อความแสดงผล เช่น "P001 | อะลูมิเนียมเส้น"
-                display_options = {
-                    f"{p['product_code']} | {p['product_name']}": p['product_id'] 
-                    for p in prods_res
-                }
-                
+                display_options = {f"{p['product_code']} | {p['product_name']}": p['product_id'] for p in prods_res}
                 jigs_data = supabase.table("jigs").select("jig_id, jig_model_code").execute().data
                 available_jigs = []
                 for j in (jigs_data or []):
@@ -542,66 +388,45 @@ elif menu == "บันทึกข้อมูลการผลิต":
                     if display_options and color_tanks_all:
                         sel_j = st.selectbox("เลือกจิ๊ก", list(jig_map.keys()), key="sel_j_log")
                         jig_id = jig_map[sel_j]
-                        
-                        # --- ส่วนที่เปลี่ยน: เลือกสินค้า ---
-                        selected_display = st.selectbox(
-                            "เลือกสินค้า (รหัส | ชื่อ)", 
-                            options=list(display_options.keys()), 
-                            key="sel_p_log"
-                        )
-                        # ดึง product_id จริงๆ ออกมาใช้งาน
+                        selected_display = st.selectbox("เลือกสินค้า (รหัส | ชื่อ)", options=list(display_options.keys()), key="sel_p_log")
                         selected_prod_id = display_options[selected_display]
-                        
-                        # ดึงข้อมูลสินค้าตัวที่เลือกมาเพื่อคำนวณปริมาตร
                         p_info = supabase.table("products").select("*").eq("product_id", selected_prod_id).single().execute().data
-                        
                         action = st.radio("การทำงาน", ["🔵 บันทึกงานต่อ", "🟢 เสร็จสิ้นงาน"], key="action_radio")
 
                         if action == "🔵 บันทึกงานต่อ":
                             sel_c_new = st.selectbox("เลือกสี", sorted(set(TANK_COLOR_MAP.values())), key="sel_c_log")
                             filtered_tanks = {n: i for n, i in color_tanks_all.items() if TANK_COLOR_MAP.get(n) == sel_c_new}
-                            sel_tank_name = st.selectbox("เลือกบ่อสี", list(filtered_tanks.keys()), key="sel_t_log")
-                            
-                            with st.form("continue_form_fixed", clear_on_submit=True):
-                                c1, c2 = st.columns(2)
-                                pcs = c1.number_input("จำนวนต่อแถว", min_value=0)
-                                rows = c1.number_input("แถวที่เต็ม", min_value=0)
-                                partial = c1.number_input("เศษ", min_value=0)
-                                
-                                total_pcs = (rows * pcs) + partial
-                                unit_vol = p_info.get('unit_volume', 0)
-                                total_vol = unit_vol * total_pcs
-                                
-                                c2.metric("จำนวนรวม (Pcs)", total_pcs)
-                                c2.metric("ปริมาตรรวม (mm³)", f"{total_vol:,.2f}")
-                                
-                                if st.form_submit_button("💾 บันทึก"):
-                                    try:
-                                    # ใช้ selected_prod_id ในการบันทึก
-                                    supabase.table("jig_usage_log").insert({
-                                        "product_id": selected_prod_id, 
-                                        "jig_id": jig_id, 
-                                        "color": sel_c_new, 
-                                        "tank_id": filtered_tanks[sel_tank_name], 
-                                        "total_pieces": total_pcs, 
-                                        "total_volume": total_vol, 
-                                        "recorded_date": datetime.now(ICT).isoformat()
-                                    }).execute()
-                            
-    # โค้ดเดิมของคุณที่บรรทัด 588
-                                response = supabase.table("jig_status").upsert({
-                                        "jig_id": jig_id, 
-                                        "status_type": "In-Process", 
-                                        "current_tank_id": filtered_tanks[sel_tank_name], 
-                                        "updated_at": datetime.now(ICT).isoformat()
-                                    }).execute()
-                                    except Exception as e:
-                                        st.error(f"เกิดข้อผิดพลาดในการบันทึก: {str(e)}") # บรรทัดนี้จะคายความลับว่าทำไมถึงพัง
-                                    
-                                    st.success("บันทึกสำเร็จ")
-                                    st.rerun()
-                    elif action == "🟢 เสร็จสิ้นงาน":
-                        if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
-                            supabase.table("jig_status").upsert({"jig_id": jig_id, "status_type": "Finished", "current_tank_id": None, "updated_at": datetime.now(ICT).isoformat()}).execute()
-                            st.success("งานเสร็จสิ้น")
-                            st.rerun()
+                            if filtered_tanks:
+                                sel_tank_name = st.selectbox("เลือกบ่อสี", list(filtered_tanks.keys()), key="sel_t_log")
+                                with st.form("continue_form_fixed", clear_on_submit=True):
+                                    c1, c2 = st.columns(2)
+                                    pcs = c1.number_input("จำนวนต่อแถว", min_value=0)
+                                    rows = c1.number_input("แถวที่เต็ม", min_value=0)
+                                    partial = c1.number_input("เศษ", min_value=0)
+                                    total_pcs = (rows * pcs) + partial
+                                    unit_vol = p_info.get('unit_volume', 0)
+                                    total_vol = unit_vol * total_pcs
+                                    c2.metric("จำนวนรวม (Pcs)", total_pcs)
+                                    c2.metric("ปริมาตรรวม (mm³)", f"{total_vol:,.2f}")
+                                    if st.form_submit_button("💾 บันทึก"):
+                                        try:
+                                            supabase.table("jig_usage_log").insert({
+                                                "product_id": selected_prod_id, "jig_id": jig_id, 
+                                                "color": sel_c_new, "tank_id": filtered_tanks[sel_tank_name], 
+                                                "total_pieces": total_pcs, "total_volume": total_vol, 
+                                                "recorded_date": datetime.now(ICT).isoformat()
+                                            }).execute()
+                                            supabase.table("jig_status").upsert({
+                                                "jig_id": jig_id, "status_type": "In-Process", 
+                                                "current_tank_id": filtered_tanks[sel_tank_name], 
+                                                "updated_at": datetime.now(ICT).isoformat()
+                                            }).execute()
+                                            st.success("บันทึกสำเร็จ")
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"เกิดข้อผิดพลาด: {str(e)}")
+                        elif action == "🟢 เสร็จสิ้นงาน":
+                            if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
+                                supabase.table("jig_status").upsert({"jig_id": jig_id, "status_type": "Finished", "current_tank_id": None, "updated_at": datetime.now(ICT).isoformat()}).execute()
+                                st.success("งานเสร็จสิ้น")
+                                st.rerun()
