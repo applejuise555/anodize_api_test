@@ -173,14 +173,15 @@ if menu == "Dashboard":
     active_tanks_set = {item["current_tank_id"] for item in active_jigs_data if item["current_tank_id"] is not None}
     active_tanks_count = len(active_tanks_set)
 
-    # ================= NEW KPI =================
-    total_logs_today = supabase.table("color_tank_logs")\
-    .select("tank_id")\
-    .gte("recorded_at", datetime.now(ICT).date().isoformat())\
-    .execute()
-
     col1.metric("🟢 กำลังผลิต (จิ๊ก)", production_count)
     col2.metric("🧪 บ่อที่กำลังใช้งาน", active_tanks_count)
+    col3, col4 = st.columns(2)
+    # ================= NEW KPI =================
+    total_logs_today = supabase.table("color_tank_logs")\
+        .select("tank_id")\
+        .gte("recorded_at", datetime.now(ICT).date().isoformat())\
+        .execute()
+
     col3, col4 = st.columns(2)
     col3.metric("📊 Log วันนี้", len(total_logs_today.data) if total_logs_today.data else 0)
 
@@ -192,6 +193,7 @@ if menu == "Dashboard":
 
     percent_out = (out_spec / len(latest)) * 100 if len(latest) else 0
     col4.metric("❌ % นอก Spec", f"{percent_out:.1f}%")
+    
     st.markdown("---")
 
     # --- Color Tank Analysis ---
