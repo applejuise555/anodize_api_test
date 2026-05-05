@@ -304,6 +304,7 @@ elif menu == "บันทึกข้อมูลการผลิต":
                 ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f")
                 temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
                 den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
+                if st.form_submit_button("บันทึกข้อมูลอโนไดซ์"):
                     supabase.table("anodize_tank_logs").insert({
                         "tank_id": ano_tanks[sel_ano], "ph_value": ph_a,
                         "temperature": temp_a, "density": den_a,
