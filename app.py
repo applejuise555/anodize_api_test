@@ -82,6 +82,62 @@ def get_status_icon(value, min_val, max_val, warn_margin=0.1):
         return "🟡"
     return "🟢"
 
+# ================= NEW: SMART VALIDATION =================
+def validate_color_input(ph, temp):
+    if ph < 0 or ph > 14:
+        st.error("❌ ค่า pH ต้องอยู่ระหว่าง 0-14")
+        return False
+    if temp < 0 or temp > 100:
+        st.error("❌ อุณหภูมิไม่สมเหตุสมผล")
+        return False
+    return True
+
+def validate_ano_input(ph, temp, den):
+    if ph < 0 or ph > 5:
+        st.error("❌ pH Anodize ผิดช่วง")
+        return False
+    if temp < 0 or temp > 50:
+        st.error("❌ อุณหภูมิผิดช่วง")
+        return False
+    if den < 0:
+        st.error("❌ Density ห้ามติดลบ")
+        return False
+    return True
+
+
+# ================= NEW: TREND PREDICTION =================
+def add_trend_prediction(df, column):
+    if len(df) < 3:
+        return df
+    import numpy as np
+    x = np.arange(len(df))
+    y = df[column].values
+    coef = np.polyfit(x, y, 1)
+    trend = np.poly1d(coef)
+    df[f"{column}_trend"] = trend(x)
+    return df
+
+
+# ================= NEW: INSIGHT ENGINE =================
+def generate_insight(df, column, name):
+    if len(df) < 5:
+        return
+    diff = df[column].diff().mean()
+    if diff > 0.05:
+        st.warning(f"📈 {name} มีแนวโน้มเพิ่มขึ้น")
+    elif diff < -0.05:
+        st.info(f"📉 {name} มีแนวโน้มลดลง")
+
+
+# ================= NEW: EXPORT =================
+def export_csv(df, name="export.csv"):
+    st.download_button(
+        "📥 ดาวน์โหลด CSV",
+        data=df.to_csv(index=False),
+        file_name=name,
+        mime="text/csv"
+    )
+
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
 # ================= DASHBOARD (FULL SYSTEM VIEW) =================
@@ -117,8 +173,25 @@ if menu == "Dashboard":
     active_tanks_set = {item["current_tank_id"] for item in active_jigs_data if item["current_tank_id"] is not None}
     active_tanks_count = len(active_tanks_set)
 
+    # ================= NEW KPI =================
+    total_logs_today = supabase.table("color_tank_logs")\
+    .select("tank_id")\
+    .gte("recorded_at", datetime.now(ICT).date().isoformat())\
+    .execute()
+
     col1.metric("🟢 กำลังผลิต (จิ๊ก)", production_count)
     col2.metric("🧪 บ่อที่กำลังใช้งาน", active_tanks_count)
+    col3, col4 = st.columns(2)
+    col3.metric("📊 Log วันนี้", len(total_logs_today.data) if total_logs_today.data else 0)
+
+# % out of spec
+    out_spec = 0
+    for _, row in latest.iterrows():
+        if row['ph_value'] < PH_MIN or row['ph_value'] > PH_MAX:
+            out_spec += 1
+
+    percent_out = (out_spec / len(latest)) * 100 if len(latest) else 0
+    col4.metric("❌ % นอก Spec", f"{percent_out:.1f}%")
     st.markdown("---")
 
     # --- Color Tank Analysis ---
