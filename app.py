@@ -289,8 +289,9 @@ elif menu == "บันทึกข้อมูลการผลิต":
                         "ph_value": ph, "temperature": temp, 
                         "recorded_at": datetime.now(ICT).isoformat()
                     }).execute()
-                    st.toast("✅ บันทึกข้อมูลบ่อสีสำเร็จ!", icon="🎨")
+                    st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
                     st.balloons() # เพิ่มเอฟเฟกต์
+                    time.sleep(1.5)
                     st.rerun()    # รีเฟรชหน้าเพื่อเคลียร์ค่า
 
     # --- Tab 2: บ่ออโนไดซ์ ---
