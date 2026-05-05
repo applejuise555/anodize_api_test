@@ -449,7 +449,18 @@ elif menu == "บันทึกข้อมูลการผลิต":
                                         except Exception as e:
                                             st.error(f"เกิดข้อผิดพลาดในการบันทึก: {str(e)}")
                         elif action == "🟢 เสร็จสิ้นงาน":
-                            if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
-                                supabase.table("jig_status").upsert({"jig_id": jig_id, "status_type": "Finished", "current_tank_id": None, "updated_at": datetime.now(ICT).isoformat()}).execute()
-                                st.success("งานเสร็จสิ้น")
-                                st.rerun()
+                            check_log = supabase.table("jig_usage_log").select("id").eq("jig_id", jig_id).limit(1).execute()
+    
+                            if not check_log.data:
+                                st.warning("⚠️ ไม่สามารถปิดงานได้: จิ๊กนี้ยังไม่มีการบันทึกข้อมูลการผลิต (กรุณาบันทึกงานต่อก่อน)")
+                            else:
+                                if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
+                                    supabase.table("jig_status").upsert({
+                                        "jig_id": jig_id, 
+                                        "status_type": "Finished", 
+                                        "current_tank_id": None, 
+                                        "updated_at": datetime.now(ICT).isoformat()
+                                    }).execute()
+                                    st.success("งานเสร็จสิ้น")
+                                    time.sleep(1)
+                                    st.rerun()
