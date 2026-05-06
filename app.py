@@ -379,19 +379,44 @@ elif menu == "บันทึกข้อมูลการผลิต":
                         st.error("กรุณาระบุรหัสสินค้า")
 
         with sub_jig:
-            st.subheader("เพิ่มรหัสจิ๊กใหม่")
-            with st.form("add_jig_fixed", clear_on_submit=True):
-                j_code = st.text_input("รหัสจิ๊ก(ปปปปดดวว จิ๊กที่เท่าไหร่ เช่น 20260501001)", key="j_code_input").strip()
-                if st.form_submit_button("ลงทะเบียนจิ๊ก"):
-                    if j_code:
-                        check_jig = supabase.table("jigs").select("jig_model_code").eq("jig_model_code", j_code).execute()
-                        if check_jig.data:
-                            st.error(f"❌ รหัสจิ๊ก '{j_code}' นี้มีอยู่ในระบบแล้ว")
-                        else:
-                            supabase.table("jigs").insert({"jig_model_code": j_code, "total_pcs_in_jig": 0}).execute()
-                            st.success(f"✅ ลงทะเบียนจิ๊ก {j_code} สำเร็จ")
-                    else: 
-                        st.error("กรุณากรอกรหัสจิ๊ก")
+            st.subheader("เพิ่มรหัสจิ๊กใหม่ (Auto-Generate)")
+            
+            # 1. สร้าง Prefix ของวันนี้ (YYYYMMDD)
+            today_prefix = datetime.now(ICT).strftime("%Y%m%d")
+            
+            # 2. หาว่าวันนี้มีจิ๊กที่ลงทะเบียนไปแล้วกี่อัน เพื่อรันลำดับต่อ
+            # ดึงรหัสจิ๊กทั้งหมดที่ขึ้นต้นด้วย prefix ของวันนี้
+            jig_count_res = supabase.table("jigs") \
+                .select("jig_model_code") \
+                .like("jig_model_code", f"{today_prefix}%") \
+                .execute()
+                
+                # คำนวณลำดับถัดไป
+            current_count = len(jig_count_res.data)
+            next_number = current_count + 1
+            # จัดฟอร์แมตให้เป็น 3 หลัก (001, 002, ...)
+            auto_jig_code = f"{today_prefix}{next_number:03d}"
+            
+            st.info(f"🆔 รหัสจิ๊กถัดไปที่จะถูกสร้าง: **{auto_jig_code}**")
+
+            with st.form("add_jig_auto", clear_on_submit=True):
+                # แสดงเป็น text_input แบบ readonly เพื่อให้ User ตรวจสอบได้แต่แก้ไขไม่ได้ (หรือจะใช้ st.write ก็ได้)
+                j_code = st.text_input("รหัสจิ๊กที่จะลงทะเบียน", value=auto_jig_code, disabled=True)
+                
+                if st.form_submit_button("➕ ลงทะเบียนจิ๊กอัตโนมัติ"):
+                    # เช็คซ้ำอีกรอบเพื่อความชัวร์ (กรณีมีคนกดพร้อมกัน)
+                    check_jig = supabase.table("jigs").select("jig_model_code").eq("jig_model_code", j_code).execute()
+                    
+                    if check_jig.data:
+                        st.error(f"❌ รหัส {j_code} ถูกลงทะเบียนไปแล้วเมื่อครู่ กรุณาลองใหม่อีกครั้ง")
+                    else:
+                        supabase.table("jigs").insert({
+                            "jig_model_code": j_code, 
+                            "total_pcs_in_jig": 0
+                        }).execute()
+                        st.success(f"✅ ลงทะเบียนจิ๊ก {j_code} สำเร็จ!")
+                        time.sleep(1.5)
+                        st.rerun()
 
         with sub_log:
             prods_res = supabase.table("products").select("product_id, product_code, product_name").execute().data
