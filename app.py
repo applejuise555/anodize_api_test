@@ -264,19 +264,19 @@ if menu == "Dashboard":
                 st.plotly_chart(fig_ph, use_container_width=True)
             with g2:
                 fig_temp = go.Figure()
-                fig_temp.add_trace(go.Scatter(x=ano_filtered["recorded_at"], y=ano_filtered["temperature"], mode='lines+markers', name='Temp', line=dict(color='#3b82f6', width=2), marker=dict(size=6)))
+                fig_temp.add_trace(go.Scatter(x=ano_chart_df["recorded_at"], y=ano_filtered["temperature"], mode='lines+markers', name='Temp', line=dict(color='#3b82f6', width=2), marker=dict(size=6)))
                 fig_temp.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.1, line_width=0)
                 fig_temp.update_layout(title="แนวโน้มอุณหภูมิ (°C)", height=350, margin=dict(t=50, b=20, l=10, r=10))
                 st.plotly_chart(fig_temp, use_container_width=True)
             with g3:
                 fig_den = go.Figure()
-                fig_den.add_trace(go.Scatter(x=ano_filtered["recorded_at"], y=ano_filtered["density"], mode='lines+markers', name='Density', line=dict(color='#a855f7', width=2), marker=dict(size=6)))
+                fig_den.add_trace(go.Scatter(x=ano_chart_df["recorded_at"], y=ano_filtered["density"], mode='lines+markers', name='Density', line=dict(color='#a855f7', width=2), marker=dict(size=6)))
                 fig_den.add_hrect(y0=DEN_ANO_MIN, y1=DEN_ANO_MAX, fillcolor="purple", opacity=0.1, line_width=0)
                 fig_den.update_layout(title="แนวโน้มความหนาแน่น", height=350, margin=dict(t=50, b=20, l=10, r=10))
                 st.plotly_chart(fig_den, use_container_width=True)
 
             with st.expander(f"📋 รายละเอียดข้อมูลบันทึก {selected_ano}"):
-                log_display = ano_filtered[["recorded_at", "ph_value", "temperature", "density"]].sort_values("recorded_at", ascending=False)
+                log_display = ano_chart_df[["recorded_at", "ph_value", "temperature", "density"]].sort_values("recorded_at", ascending=False)
                 st.dataframe(log_display.style.format({"ph_value": "{:.2f}", "temperature": "{:.1f}", "density": "{:.3f}"}), use_container_width=True)
         else:
             st.warning("ไม่พบข้อมูลบันทึกสำหรับบ่อนี้")
