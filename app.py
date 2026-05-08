@@ -241,8 +241,8 @@ if menu == "Dashboard":
     st.markdown("---")
     st.subheader(f"📈 ข้อมูลบ่ออโนไดซ์ ประจำวันที่ {selected_date.strftime('%d/%m/%Y')}")
     if logs_a:
-    df_a = pd.DataFrame(logs_a)
-    df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"])
+        df_a = pd.DataFrame(logs_a)
+        df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"])
         tank_map = load_tanks()
         inv_map = {v: k for k, v in tank_map.items()}
         df_a["tank_name"] = df_a["tank_id"].map(inv_map)
