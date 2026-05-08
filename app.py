@@ -471,8 +471,7 @@ elif menu == "บันทึกข้อมูลการผลิต":
                         action = st.radio("การทำงาน", ["🔵 บันทึกงานต่อ", "🟢 เสร็จสิ้นงาน"], key="action_radio")
 
                         if action == "🔵 บันทึกงานต่อ":
-                            jig_map = {f"Jig: {j['jig_model_code']} | Lot: {j['lot_no']}": j['jig_id'] for j in available_jigs}
-                            sel_j_display = st.selectbox("เลือกจิ๊ก (รหัส | Lot)", list(jig_map.keys()), key="sel_j_log")
+                            
                             jig_id = jig_map[sel_j_display]
                             sel_c_new = st.selectbox("เลือกสี", sorted(set(TANK_COLOR_MAP.values())), key="sel_c_log")
                             filtered_tanks = {n: i for n, i in color_tanks_all.items() if TANK_COLOR_MAP.get(n) == sel_c_new}
