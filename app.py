@@ -104,6 +104,7 @@ def render_svg_map(svg_file_path):
         svg_content = f.read()
 
     html_code = f"""
+    <!DOCTYPE html>
     <html>
     <body>
 
@@ -125,6 +126,8 @@ def render_svg_map(svg_file_path):
 
         [id]:hover {{
             opacity:0.7;
+            stroke:red !important;
+            stroke-width:3 !important;
         }}
     </style>
 
@@ -140,9 +143,13 @@ def render_svg_map(svg_file_path):
 
                 const tankId = el.id;
 
-                localStorage.setItem("tank_click", tankId);
-
                 console.log("CLICK =", tankId);
+
+                // ส่งค่ากลับ streamlit
+                window.parent.postMessage({{
+                    type: "streamlit:setComponentValue",
+                    value: tankId
+                }}, "*");
 
             }});
 
@@ -154,14 +161,12 @@ def render_svg_map(svg_file_path):
     </html>
     """
 
-    components.html(html_code, height=650)
-
-    clicked = st_javascript("""
-        localStorage.getItem("tank_click")
-    """)
+    clicked = components.html(
+        html_code,
+        height=650
+    )
 
     return clicked
-
 
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
@@ -442,11 +447,6 @@ if menu == "บันทึกข้อมูลการผลิต":
     
         # ดึงค่า ID จากการคลิก
     clicked_id = render_svg_map("ผังบ่อplain.svg")
-
-    if clicked_id and clicked_id != "0":
-        st.session_state["clicked_tank"] = clicked_id
-
-    clicked_id = st.session_state.get("clicked_tank", None)
 
     st.write("CLICK =", clicked_id)
     tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่ออโนไดซ์ (Anodize)", "งานจิ๊ก (Jig System)"])
