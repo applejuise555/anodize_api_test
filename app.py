@@ -99,6 +99,7 @@ def get_quarter_range(year, quarter):
 
 # --- แก้ไขฟังก์ชัน render_svg_map เพื่อ Debug --
 def render_svg_map(svg_file_path):
+
     with open(svg_file_path, "r", encoding="utf-8") as f:
         svg_content = f.read()
 
@@ -107,38 +108,48 @@ def render_svg_map(svg_file_path):
     <body>
 
     <style>
+        body {{
+            margin:0;
+            overflow:hidden;
+        }}
+
         svg {{
-            width: 100%;
-            height: auto;
+            width:100%;
+            height:auto;
         }}
 
         [id] {{
-            cursor: pointer;
+            cursor:pointer;
+            transition:0.2s;
         }}
 
         [id]:hover {{
-            opacity: 0.7;
-        }}
-
-        svg text {{
-            pointer-events: none;
+            opacity:0.7;
         }}
     </style>
 
     {svg_content}
 
     <script>
-        const allItems = document.querySelectorAll("[id]");
+        const items = document.querySelectorAll("[id]");
 
-        allItems.forEach(el => {{
-            el.onclick = () => {{
-                const clicked = el.id;
+        items.forEach(el => {{
 
-                console.log("CLICK:", clicked);
+            el.addEventListener("click", function(e) {{
 
-                // เก็บค่าไว้
-                localStorage.setItem("tank_click", clicked);
-            }};
+                e.preventDefault();
+
+                const tankId = el.id;
+
+                console.log("CLICK =", tankId);
+
+                window.parent.postMessage({{
+                    type: "streamlit:setComponentValue",
+                    value: tankId
+                }}, "*");
+
+            }});
+
         }});
     </script>
 
@@ -146,11 +157,10 @@ def render_svg_map(svg_file_path):
     </html>
     """
 
-    components.html(html_code, height=650)
-
-    clicked = st_javascript("""
-    localStorage.getItem("tank_click")
-    """)
+    clicked = components.html(
+        html_code,
+        height=650
+    )
 
     return clicked
 
