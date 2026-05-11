@@ -146,7 +146,7 @@ def render_svg_map(svg_file_path):
 
             }});
 
-        });
+        }});
 
     </script>
 
