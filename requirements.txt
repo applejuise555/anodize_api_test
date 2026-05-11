@@ -31,3 +31,4 @@ streamlit-autorefresh
 plotly
 streamlit-javascript
 streamlit-js-eval
+streamlit-image-coordinates
