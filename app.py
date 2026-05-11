@@ -123,10 +123,6 @@ def render_svg_map(svg_file_path):
     res = components.html(html_code, height=600, scrolling=True)
     return res
 
-# --- ในส่วนบันทึกข้อมูล ให้เพิ่มบรรทัดนี้เพื่อเช็คค่า ---
-clicked_id = render_svg_map("ผังบ่อplain.svg")
-st.write(f"ID ที่คุณคลิกคือ: {clicked_id}") # <--- เพิ่มบรรทัดนี้เพื่อเช็ค
-
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
 # ================= DASHBOARD (FULL SYSTEM VIEW) =================
