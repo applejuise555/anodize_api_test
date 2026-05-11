@@ -30,3 +30,4 @@ supabase
 streamlit-autorefresh
 plotly
 streamlit-javascript
+streamlit-js-eval
