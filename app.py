@@ -108,9 +108,12 @@ def render_svg_map(svg_file_path):
     <script>
         const container = document.getElementById('svg-container');
         container.addEventListener('click', function(e) {{
-            // พยายามหา ID จากตัวมันเอง หรือกลุ่ม (Group <g>) ที่มันสังกัด
+            // หา Element ที่มี ID ที่ใกล้ที่สุดจากจุดที่คลิก
             const target = e.target.closest('[id]'); 
-            if (target && target.id) {{
+            
+            // ถ้าเจอ ID และไม่ใช่ตัว container เอง
+            if (target && target.id && target.id !== 'svg-container') {{
+                // ส่งค่ากลับไปที่ Streamlit
                 window.parent.postMessage({{
                     type: 'streamlit:setComponentValue',
                     value: target.id
