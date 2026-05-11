@@ -10,6 +10,8 @@ import time
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_javascript import st_javascript
+from streamlit_js_eval import streamlit_js_eval
+
 
 # 1. ตั้งค่า Timezone (UTC +7)
 ICT = timezone(timedelta(hours=7))
@@ -104,7 +106,6 @@ def render_svg_map(svg_file_path):
         svg_content = f.read()
 
     html_code = f"""
-    <!DOCTYPE html>
     <html>
     <body>
 
@@ -126,8 +127,6 @@ def render_svg_map(svg_file_path):
 
         [id]:hover {{
             opacity:0.7;
-            stroke:red !important;
-            stroke-width:3 !important;
         }}
     </style>
 
@@ -143,13 +142,12 @@ def render_svg_map(svg_file_path):
 
                 const tankId = el.id;
 
-                console.log("CLICK =", tankId);
-
-                // ส่งค่ากลับ streamlit
                 window.parent.postMessage({{
                     type: "streamlit:setComponentValue",
                     value: tankId
                 }}, "*");
+
+                console.log("CLICK =", tankId);
 
             }});
 
