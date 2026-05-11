@@ -453,19 +453,25 @@ if menu == "บันทึกข้อมูลการผลิต":
             idx_ano = ano_list.index(default_ano) if default_ano in ano_list else 0
             sel_ano = st.selectbox("ยืนยันบ่ออโนไดซ์", ano_list, index=idx_ano)
             
-            with st.form("ano_form", clear_on_submit=True): [cite: 159]
-                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f") [cite: 159]
-                temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f") [cite: 159]
-                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f") [cite: 159]
-                if st.form_submit_button("บันทึกข้อมูลอโนไดซ์"): [cite: 160]
-                    supabase.table("anodize_tank_logs").insert({ [cite: 160]
-                        "tank_id": ano_tanks[sel_ano], "ph_value": ph_a,
-                        "temperature": temp_a, "density": den_a,
-                        "recorded_at": datetime.now(ICT).isoformat() [cite: 161]
-                    }).execute()
-                    st.success("บันทึกข้อมูลอโนไดซ์สำเร็จ") [cite: 161]
-                    time.sleep(1.5)
-                    st.rerun()
+            with st.form("ano_form", clear_on_submit=True):
+                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f")
+                temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
+                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
+                
+                if st.form_submit_button("บันทึกข้อมูลอโนไดซ์"):
+                    try:
+                        supabase.table("anodize_tank_logs").insert({
+                            "tank_id": ano_tanks[sel_ano], 
+                            "ph_value": ph_a,
+                            "temperature": temp_a, 
+                            "density": den_a,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                        st.success("✅ บันทึกข้อมูลอโนไดซ์สำเร็จ")
+                        time.sleep(1.5)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาด: {e}")
 
     # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
     with tab_main[2]:
