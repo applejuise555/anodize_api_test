@@ -9,6 +9,7 @@ from plotly.subplots import make_subplots
 import time
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit_javascript import st_javascript
 
 # 1. ตั้งค่า Timezone (UTC +7)
 ICT = timezone(timedelta(hours=7))
@@ -130,36 +131,34 @@ def render_svg_map(svg_file_path):
     {svg_content}
 
     <script>
+
         const items = document.querySelectorAll("[id]");
 
         items.forEach(el => {{
 
-            el.addEventListener("click", function(e) {{
-
-                e.preventDefault();
+            el.addEventListener("click", function() {{
 
                 const tankId = el.id;
 
-                console.log("CLICK =", tankId);
+                localStorage.setItem("tank_click", tankId);
 
-                window.parent.postMessage({{
-                    type: "streamlit:setComponentValue",
-                    value: tankId
-                }}, "*");
+                console.log("CLICK =", tankId);
 
             }});
 
-        }});
+        });
+
     </script>
 
     </body>
     </html>
     """
 
-    clicked = components.html(
-        html_code,
-        height=650
-    )
+    components.html(html_code, height=650)
+
+    clicked = st_javascript("""
+        localStorage.getItem("tank_click")
+    """)
 
     return clicked
 
@@ -443,12 +442,12 @@ if menu == "บันทึกข้อมูลการผลิต":
     
         # ดึงค่า ID จากการคลิก
     clicked_id = render_svg_map("ผังบ่อplain.svg")
-    
-    if clicked_id:
+
+    if clicked_id and clicked_id != "0":
         st.session_state["clicked_tank"] = clicked_id
-    
+
     clicked_id = st.session_state.get("clicked_tank", None)
-    
+
     st.write("CLICK =", clicked_id)
     tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่ออโนไดซ์ (Anodize)", "งานจิ๊ก (Jig System)"])
 
