@@ -423,16 +423,18 @@ if menu == "บันทึกข้อมูลการผลิต":
             detected_color = TANK_COLOR_MAP.get(selected_tank_name, "Black") [cite: 110, 156]
             render_color_bar(detected_color) [cite: 112, 113]
 
-            with st.form("color_log_form", clear_on_submit=True): [cite: 156]
-                ph = st.number_input("ค่า pH", step=0.1, format="%.2f") [cite: 156]
-                temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f") [cite: 156]
+            # --- ลบของเก่าออกแล้วใช้ชุดนี้แทน (ลบช่องว่างส่วนเกินออกแล้ว) ---
+            with st.form("color_log_form", clear_on_submit=True):
+                ph = st.number_input("ค่า pH", step=0.1, format="%.2f")
+                temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
                 if st.form_submit_button("บันทึกค่า"):
-                    supabase.table("color_tank_logs").insert({ [cite: 157]
+                    supabase.table("color_tank_logs").insert({
                         "tank_id": color_tanks[selected_tank_name], 
-                        "ph_value": ph, "temperature": temp, 
+                        "ph_value": ph, 
+                        "temperature": temp, 
                         "recorded_at": datetime.now(ICT).isoformat()
                     }).execute()
-                    st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ") [cite: 158]
+                    st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
                     time.sleep(1.5)
                     st.rerun()
 
