@@ -422,15 +422,29 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
     
-    # แสดงผังบ่อที่ด้านบนเพื่อให้ User คลิก
-    st.subheader("📍 คลิกที่บ่อในผังเพื่อเลือกรายการ")
+    # ดึงค่า ID จากการคลิก
     clicked_id = render_svg_map("ผังบ่อplain.svg")
 
     tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่ออโนไดซ์ (Anodize)", "งานจิ๊ก (Jig System)"])
 
-    # --- Tab 1: บ่อสี ---
     with tab_main[0]:
-        color_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color") 
+        color_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
+        
+        # ล้างค่าว่าง (Strip) เพื่อป้องกันการสะกดผิดจาก ID
+        clean_clicked_id = clicked_id.strip() if clicked_id else None
+        
+        # ค้นหาบ่อที่ตรงกัน
+        default_index = 0
+        tank_list = list(color_tanks.keys())
+        
+        if clean_clicked_id in tank_list:
+            default_index = tank_list.index(clean_clicked_id)
+            st.success(f"📍 บ่อที่เลือกจากผัง: **{clean_clicked_id}**")
+        elif clean_clicked_id:
+            st.warning(f"⚠️ คลิกโดน ID '{clean_clicked_id}' แต่ไม่มีในระบบบ่อสี")
+
+        selected_tank_name = st.selectbox("ยืนยันบ่อสี", tank_list, index=default_index)
+        # ... ต่อด้วยส่วนฟอร์มบันทึกข้อมูล ...
         
         # กำหนดชื่อบ่อจาก ID ที่คลิก (ถ้ามีการคลิก)
         default_tank = None
