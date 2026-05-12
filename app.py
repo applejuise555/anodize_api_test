@@ -102,247 +102,65 @@ def get_quarter_range(year, quarter):
 import streamlit.components.v1 as components
 
 def render_tank_map():
+    # สร้าง HTML สำหรับถังแต่ละใบ โดยใช้ฟังก์ชัน JS เพื่อส่งค่ากลับไปที่ Streamlit
+    def tank_html(name, top, left, width, height, bg, extra_style=""):
+        # แปลงชื่อให้ไม่มีช่องว่างเพื่อใช้เป็น ID
+        safe_name = name.replace(".", "").replace(" ", "")
+        return f"""
+        <div class="tank {extra_style}" 
+             onclick="window.parent.postMessage({{type: 'tank_click', name: '{name}'}}, '*')"
+             style="left:{left}px;top:{top}px;width:{width}px;height:{height}px;background:{bg};cursor:pointer;">
+            {name}
+        </div>
+        """
 
-    html = """
+    html_code = f"""
     <style>
-
-    body{
-        margin:0;
-        padding:0;
-    }
-
-    .plant-map{
-        position:relative;
-        width:1100px;
-        height:720px;
-        background:#e9e9e9;
-        border:2px solid #999;
-        margin:auto;
-        overflow:hidden;
-    }
-
-    .tank{
-        position:absolute;
-        color:white;
-        font-weight:bold;
-        font-size:14px;
-        border-radius:4px;
-        padding:4px;
-        text-align:center;
-        border:1px solid #555;
-        box-sizing:border-box;
-        font-family:Arial;
-    }
-
-    .vertical{
-        writing-mode:vertical-rl;
-        text-orientation:mixed;
-    }
-
-    .ro{
-        background:#d7ffff !important;
-        color:black !important;
-    }
-
+        .plant-map {{ position:relative; width:1100px; height:720px; background:#e9e9e9; border:2px solid #999; margin:auto; overflow:hidden; font-family:Arial; }}
+        .tank {{ position:absolute; color:white; font-weight:bold; font-size:14px; border-radius:4px; padding:4px; text-align:center; border:1px solid #555; box-sizing:border-box; transition: 0.3s; }}
+        .tank:hover {{ opacity: 0.8; transform: scale(1.02); border: 2px solid yellow; }}
+        .vertical {{ writing-mode:vertical-rl; text-orientation:mixed; }}
+        .ro {{ background:#d7ffff !important; color:black !important; }}
     </style>
 
     <div class="plant-map">
-
-        <!-- TOP ROW -->
-
-        <div class="tank"
-            style="left:0px;top:0px;width:80px;height:80px;background:#111;">
-            5.Black
-        </div>
-
-        <div class="tank"
-            style="left:140px;top:0px;width:70px;height:80px;background:red;">
-            2.Red
-        </div>
-
-        <div class="tank"
-            style="left:210px;top:0px;width:60px;height:80px;background:purple;">
-            3.Violet
-        </div>
-
-        <div class="tank"
-            style="left:295px;top:0px;width:70px;height:80px;background:green;">
-            8.Green
-        </div>
-
-        <div class="tank"
-            style="left:365px;top:0px;width:65px;height:80px;background:#222;">
-            17.Black
-        </div>
-
-        <div class="tank"
-            style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">
-            15.Gold
-        </div>
-
-        <div class="tank"
-            style="left:525px;top:0px;width:65px;height:80px;background:orange;">
-            9.Orange
-        </div>
-
-        <div class="tank"
-            style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">
-            10.Light Blue
-        </div>
-
-        <div class="tank"
-            style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">
-            6.Banana
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:0px;width:70px;height:80px;background:blue;">
-            16.Blue
-        </div>
-
-        <div class="tank"
-            style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">
-            4.Dark Blue
-        </div>
-
-        <!-- RO -->
-
-        <div class="tank ro"
-            style="left:140px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:455px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:785px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <!-- CENTER -->
-
-        <div class="tank vertical"
-            style="left:0px;top:180px;width:60px;height:275px;background:#777;">
-            AlmiteSealerLiquid
-        </div>
-
-        <div class="tank"
-            style="left:270px;top:200px;width:80px;height:50px;background:#111;">
-            20.Black
-        </div>
-
-        <div class="tank"
-            style="left:270px;top:252px;width:80px;height:35px;background:darkred;">
-            1.DarkRed
-        </div>
-
-        <div class="tank vertical"
-            style="left:380px;top:210px;width:85px;height:130px;background:magenta;">
-            7.Pink
-        </div>
-
-        <div class="tank"
-            style="left:540px;top:190px;width:85px;height:130px;background:#777;">
-            HotSeal
-        </div>
-
-        <div class="tank vertical"
-            style="left:540px;top:325px;width:85px;height:120px;background:#d4af00;color:black;">
-            11.Gold
-        </div>
-
-        <!-- RIGHT -->
-
-        <div class="tank"
-            style="left:785px;top:200px;width:65px;height:55px;background:darkred;">
-            1.DarkRed
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:257px;width:65px;height:55px;background:#d9a27f;color:black;">
-            19.Copper
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:314px;width:65px;height:55px;background:#777;">
-            12.Titanium
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:371px;width:65px;height:55px;background:plum;">
-            14.RoseGold
-        </div>
-
-        <!-- ANODIZE -->
-
-        <div class="tank vertical"
-            style="left:890px;top:520px;width:140px;height:190px;background:#ccc;color:black;">
-            AnodizedPPool1
-        </div>
-
-        <!-- DARK TITANIUM -->
-
-        <div class="tank"
-            style="left:310px;top:120px;width:80px;height:40px;background:#666;">
-            13.DarkTitanium
-        </div>
+        {tank_html("5.Black", 0, 0, 80, 80, "#111")}
+        {tank_html("2.Red", 0, 140, 70, 80, "red")}
+        {tank_html("3.Violet", 0, 210, 60, 80, "purple")}
+        {tank_html("8.Green", 0, 295, 70, 80, "green")}
+        {tank_html("17.Black", 0, 365, 65, 80, "#222")}
+        {tank_html("15.Gold", 0, 455, 70, 80, "#d4af00")}
+        {tank_html("9.Orange", 0, 525, 65, 80, "orange")}
+        {tank_html("10.Light Blue", 0, 620, 70, 80, "cyan", "color:black;")}
+        {tank_html("6.Banana", 0, 690, 70, 80, "#7fff00", "color:black;")}
+        {tank_html("16.Blue", 0, 785, 70, 80, "blue")}
+        {tank_html("4.Dark Blue", 0, 855, 65, 80, "darkblue")}
         
-        <div class="tank"
-            style="left:390px;top:120px;width:80px;height:40px;background:#666;">
-        </div>
-        
-        <!-- ORANGE OIL -->
-        
-        <div class="tank"
-            style="left:625px;top:120px;width:80px;height:40px;background:#dd6600;">
-            18.OrangeOil
-        </div>
-        
-        <div class="tank"
-            style="left:705px;top:120px;width:80px;height:40px;background:#dd6600;">
-        </div>
-        
-        <!-- RO CENTER -->
-        
-        <div class="tank ro"
-            style="left:380px;top:355px;width:85px;height:90px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:625px;top:190px;width:90px;height:125px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:625px;top:320px;width:90px;height:125px;">
-            RO
-        </div>
-        
-        <!-- RO RIGHT -->
-        
-        <div class="tank ro"
-            style="left:850px;top:200px;width:85px;height:110px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:850px;top:312px;width:85px;height:114px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:990px;top:215px;width:85px;height:80px;">
-            RO
+        {tank_html("11.Gold", 325, 540, 85, 120, "#d4af00", "vertical")}
+        {tank_html("1.DarkRed", 252, 270, 80, 35, "darkred")}
+        {tank_html("13.DarkTitanium", 120, 310, 80, 40, "#666")}
+        {tank_html("AnodizedPPool1", 520, 890, 140, 190, "#ccc", "vertical; color:black;")}
         </div>
 
-    </div>
+    <script>
+        // ไม่ต้องทำอะไรเพิ่ม ระบบจะใช้ postMessage ส่งค่าไปที่ Streamlit
+    </script>
     """
-
-    components.html(html, height=750, scrolling=False)
+    
+    # ใช้ Component เพื่อดักจับข้อมูลการคลิก
+    clicked_tank = st_javascript("""
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'tank_click') {
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: event.data.name
+                }, '*');
+            }
+        }, false);
+    """)
+    
+    components.html(html_code, height=750)
+    return clicked_tank
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
