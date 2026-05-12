@@ -495,17 +495,16 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
-    # 1. แสดง map ก่อน
     clicked = render_tank_map()
 
-    # 2. รับค่าที่คลิก
     if clicked and clicked.selection:
-        tank_name = clicked.selection["points"][0]["customdata"]
-        st.session_state["selected_tank"] = tank_name
-
-    # 3. ถ้ามีค่า → เปิดฟอร์ม
-    if st.session_state.get("selected_tank"):
-        record_modal(st.session_state["selected_tank"])
+        points = clicked.selection.get("points", [])
+    
+        if len(points) > 0:
+            tank_name = points[0].get("customdata")
+    
+            if tank_name:
+                st.session_state["selected_tank"] = tank_name
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
