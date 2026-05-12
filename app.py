@@ -101,48 +101,18 @@ def get_quarter_range(year, quarter):
     return start_date, end_date
 #============================================================================================
 def render_tank_map():
-    def t_div(name, top, left, w, h, bg, extra=""):
-        # เปลี่ยนจากการใช้ postMessage มาเป็นการเปลี่ยน URL (Query Params)
-        return f"""
-        <div class="tank {extra}" 
-             onclick="clickTank('{name}')"
-             style="left:{left}px;top:{top}px;width:{w}px;height:{h}px;background:{bg};cursor:pointer;">
-            {name}
-        </div>"""
-
-    html_code = f"""
+    # โค้ด HTML/CSS เหมือนเดิม แต่เปลี่ยน onclick เป็น parent.postMessage
+    html_code = """
     <style>
-        .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }}
-        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; }}
-        .tank:hover {{ opacity: 0.7; border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }}
-        .vertical {{ writing-mode:vertical-rl; text-orientation:mixed; font-size:16px; }}
+        .plant-map { position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }
+        .tank { position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; cursor:pointer; }
+        .tank:hover { opacity: 0.7; border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }
     </style>
-    <script>
-        function clickTank(name) {{
-            // ส่งค่าชื่อบ่อผ่าน URL Query Params เพื่อให้ Streamlit อ่านค่าได้ทันทีและไม่หาย
-            const url = new URL(window.parent.location.href);
-            url.searchParams.set('tank', name);
-            window.parent.location.href = url.href;
-        }}
-    </script>
     <div class="plant-map">
-        {t_div("5Black", 10, 10, 70, 70, "#111")}
-        {t_div("2Red", 10, 140, 65, 70, "red")}
-        {t_div("3Violet", 10, 205, 65, 70, "purple")}
-        {t_div("8Green", 10, 290, 65, 70, "green")}
-        {t_div("17Black", 10, 355, 65, 70, "#222")}
-        {t_div("15Gold", 10, 440, 65, 70, "#d4af00")}
-        {t_div("9Orange", 10, 505, 65, 70, "orange")}
-        {t_div("10LightBlue", 10, 600, 65, 70, "cyan", "color:black;")}
-        {t_div("6BananaLeafGreen", 10, 665, 65, 70, "#7fff00", "color:black;")}
-        {t_div("16Blue", 10, 760, 65, 70, "blue")}
-        {t_div("4DarkBlue", 10, 825, 65, 70, "darkblue")}
-        {t_div("20Black", 245, 260, 75, 45, "#111")}
-        {t_div("1DarkRedA", 295, 260, 75, 45, "darkred")}
-        {t_div("7Pink", 245, 360, 80, 160, "magenta", "vertical")}
-        {t_div("HotSealH60", 250, 520, 80, 160, "#666")}
-        {t_div("11Gold", 415, 520, 80, 160, "#cc9900", "vertical")}
-    </div>
+        <div class="tank" style="left:10px;top:10px;width:70px;height:70px;background:#111;" onclick="parent.postMessage({type: 'tank_click', name: '5Black'}, '*')">5Black</div>
+        <div class="tank" style="left:140px;top:10px;width:65px;height:70px;background:red;" onclick="parent.postMessage({type: 'tank_click', name: '2Red'}, '*')">2Red</div>
+        <div class="tank" style="left:205px;top:10px;width:65px;height:70px;background:purple;" onclick="parent.postMessage({type: 'tank_click', name: '3Violet'}, '*')">3Violet</div>
+        </div>
     """
     components.html(html_code, height=750)
 #=================================================================================
@@ -197,12 +167,13 @@ def record_modal(tank_name):
                             "recorded_at": datetime.now(ICT).isoformat()
                         }).execute()
                         st.success("บันทึกสำเร็จ!")
-                        st.query_params.clear()
-                        time.sleep(1)
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Error: {e}")
-
+                        # --- ล้างค่าเพื่อให้ฟอร์มปิด ---
+                st.session_state.selected_tank = None
+                st.session_state.js_key = st.session_state.get('js_key', 0) + 1
+                time.sleep(0.5)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
     # ปุ่มปิดหน้าต่าง (อยู่นอกฟอร์ม แต่อยู่ในระดับเดียวกับ with st.form)
     if st.button("❌ ปิดหน้าต่าง"):
         st.query_params.clear()
@@ -485,15 +456,28 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
 
-    # 1. เช็คทันทีว่าใน URL มีชื่อบ่อไหม (ตรวจจาก st.query_params)
-    # วิธีนี้ Native และเร็วที่สุด ไม่ต้องรอ JS ทำงาน
-    clicked_tank = st.query_params.get("tank")
+    # 1. ใช้ JavaScript ดักฟังการคลิก (วิธีนี้จะเสถียรที่สุดสำหรับ Iframe)
+    # เราจะใช้ key ที่เปลี่ยนไปเรื่อยๆ เพื่อให้มัน Re-listen เสมอ
+    js_key = st.session_state.get('js_key', 0)
+    result = stjs.st_javascript("""
+        await new Promise(resolve => {
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'tank_click') {
+                    resolve(event.data.name);
+                }
+            }, { once: true });
+        });
+    """, key=f"listener_{js_key}")
 
-    if clicked_tank:
-        # ถ้าเจอชื่อบ่อ ให้เปิด Dialog ทันที
-        record_modal(clicked_tank)
+    # 2. ถ้ามีการคลิก ให้เก็บค่าลง Session State
+    if result and result != 0:
+        st.session_state.selected_tank = result
 
-    # 2. แสดงแผนผังด้านล่าง
+    # 3. ถ้าใน Session มีค่า ให้เปิด Modal ค้างไว้
+    if st.session_state.get("selected_tank"):
+        record_modal(st.session_state.selected_tank)
+
+    st.info("💡 คลิกที่ชื่อบ่อในแผนผังด้านล่างเพื่อบันทึกข้อมูล")
     render_tank_map()
     st.markdown("---")
     
