@@ -33,3 +33,4 @@ streamlit-javascript
 streamlit-js-eval
 streamlit-image-coordinates
 pillow
+streamlit-plotly-events
