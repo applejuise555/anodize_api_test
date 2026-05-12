@@ -164,51 +164,63 @@ def render_tank_map():
 def record_modal(tank_name):
     st.write(f"### 📍 บ่อ: {tank_name}")
     
-    # เช็คประเภทบ่อให้แม่นยำ
+    # 1. เช็คประเภทบ่อจากชื่อ
     is_anodize = "Anodized" in tank_name or "PPool" in tank_name
     
-    # ตัวอย่างฟอร์ม (ปรับตามโค้ดเดิมของคุณ)
-    with st.form("my_form", clear_on_submit=True):
+    # 2. เริ่มสร้างฟอร์ม (ใช้ชื่อฟอร์มเดียวเพื่อความง่าย หรือแยกตามประเภท)
+    with st.form("modal_record_form", clear_on_submit=True):
         if not is_anodize:
-            ph = st.number_input("ค่า pH", value=5.50)
-            temp = st.number_input("อุณหภูมิ (°C)", value=30.0)
-        else:
-            ph = st.number_input("ค่า pH", value=1.20)
-            temp = st.number_input("อุณหภูมิ (°C)", value=20.0)
-            density = st.number_input("ความหนาแน่น", value=1.000)
+            # --- ส่วนของบ่อสี ---
+            ph = st.number_input("ค่า pH (Color)", step=0.01, format="%.2f", value=5.50)
+            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=30.0)
             
-        if st.form_submit_button("💾 บันทึก"):
-           all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
+            if st.form_submit_button("💾 บันทึกบ่อสี"):
+                all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
                 if tank_name in all_tanks:
-                    supabase.table("color_tank_logs").insert({
-                        "tank_id": all_tanks[tank_name],
-                        "ph_value": ph,
-                        "temperature": temp,
-                        "recorded_at": datetime.now(ICT).isoformat()
-                    }).execute()
-                    st.success("บันทึกบ่อสีสำเร็จ!")
-                    time.sleep(1)
-                    st.rerun()
+                    try:
+                        supabase.table("color_tank_logs").insert({
+                            "tank_id": all_tanks[tank_name],
+                            "ph_value": ph,
+                            "temperature": temp,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                        
+                        st.success("บันทึกบ่อสีสำเร็จ!")
+                        st.session_state['js_key'] = st.session_state.get('js_key', 0) + 1
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาด: {e}")
                 else:
-                    st.error(f"ไม่พบชื่อบ่อ '{tank_name}' ในฐานข้อมูล (เช็คในตาราง tanks)")
-    else:
-        # ฟอร์มบ่ออโนไดซ์ (pH, Temp, Density)
-        with st.form("modal_form_ano", clear_on_submit=True):
-            ph_a = st.number_input("ค่า pH (อโนไดซ์)", step=0.01, format="%.2f", value=1.20)
+                    st.error(f"ไม่พบชื่อบ่อ '{tank_name}' ในฐานข้อมูล (ประเภท Color)")
+
+        else:
+            # --- ส่วนของบ่ออโนไดซ์ ---
+            ph_a = st.number_input("ค่า pH (Anodize)", step=0.01, format="%.2f", value=1.20)
             temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
             den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", value=1.000)
+            
             if st.form_submit_button("💾 บันทึกอโนไดซ์"):
                 all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
                 if tank_name in all_tanks:
-                    supabase.table("anodize_tank_logs").insert({
-                        "tank_id": all_tanks[tank_name],
-                        "ph_value": ph_a, "temperature": temp_a, "density": den_a,
-                        "recorded_at": datetime.now(ICT).isoformat()
-                    }).execute()
-            # --- ส่วนสำคัญหลังบันทึกสำเร็จ ---
-            st.success("บันทึกข้อมูลสำเร็จ!")
-            # เปลี่ยน JS Key เพื่อให้เริ่มรับค่าคลิกใหม่ได้แบบสะอาดๆ
-            st.session_state['js_key'] = st.session_state.get('js_key', 0) + 1
+                    try:
+                        supabase.table("anodize_tank_logs").insert({
+                            "tank_id": all_tanks[tank_name],
+                            "ph_value": ph_a,
+                            "temperature": temp_a,
+                            "density": den_a,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                        
+                        st.success("บันทึกอโนไดซ์สำเร็จ!")
+                        st.session_state['js_key'] = st.session_state.get('js_key', 0) + 1
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาด: {e}")
+                else:
+                    st.error(f"ไม่พบชื่อบ่อ '{tank_name}' ในฐานข้อมูล (ประเภท Anodize)")
+                    st.session_state.js_key += 1
             time.sleep(1)
             st.rerun()
 #=================================================================   
