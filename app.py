@@ -111,7 +111,6 @@ def render_tank_map():
         background:#e9e9e9;
         border:2px solid #999;
         margin:auto;
-        overflow:hidden;
     }
 
     .tank{
@@ -119,18 +118,13 @@ def render_tank_map():
         border:none;
         color:white;
         font-weight:bold;
-        font-size:16px;
-        cursor:pointer;
-        border-radius:0px;
+        font-size:14px;
+        border-radius:4px;
     }
 
     .ro{
-        background:#d7ffff;
-        color:black;
-    }
-
-    .gray{
-        background:#6f6f6f;
+        background:#d7ffff !important;
+        color:black !important;
     }
 
     .vertical{
@@ -138,118 +132,118 @@ def render_tank_map():
         text-orientation:mixed;
     }
 
-    iframe{
-        height:0px !important;
-    }
-
     </style>
     """, unsafe_allow_html=True)
 
-    clicked = st_javascript("""
-    (async () => {
+    html = """
 
-        function makeTank(id,text,left,top,width,height,color,extra=""){
-            return `
-            <button
-                onclick="window.parent.postMessage(
-                    {type:'streamlit:setComponentValue',value:'${id}'},
-                    '*'
-                )"
-                class="tank ${extra}"
-                style="
-                    left:${left}px;
-                    top:${top}px;
-                    width:${width}px;
-                    height:${height}px;
-                    background:${color};
-                ">
-                ${text}
-            </button>
-            `
-        }
+    <div class="plant-map">
 
-        let html = `
-        <div class="plant-map">
-
-            ${makeTank("5Black","5.Black",0,0,80,80,"#111")}
-            ${makeTank("2Red","2.Red",140,0,70,80,"red")}
-            ${makeTank("3Violet","3.Violet",210,0,60,80,"purple")}
-            ${makeTank("8Green","8.Green",295,0,70,80,"green")}
-            ${makeTank("17Black","17.Black",365,0,65,80,"#222")}
-
-            ${makeTank("15Gold","15.Gold",455,0,70,80,"#d4af00")}
-            ${makeTank("9Orange","9.Orange",525,0,65,80,"orange")}
-
-            ${makeTank("10LightBlue","10.Light Blue",620,0,70,80,"cyan")}
-            ${makeTank("6BananaLeafGreen","6.Banana",690,0,70,80,"#7fff00")}
-
-            ${makeTank("16Blue","16.Blue",785,0,70,80,"blue")}
-            ${makeTank("4DarkBlue","4.Dark Blue",855,0,65,80,"darkblue")}
-
-            ${makeTank("RO1","RO",140,82,130,65,"#d7ffff","ro")}
-            ${makeTank("RO2","RO",455,82,130,65,"#d7ffff","ro")}
-            ${makeTank("RO3","RO",785,82,130,65,"#d7ffff","ro")}
-
-            ${makeTank("DarkTitanium","DarkTitanium",310,120,80,40,"#7d6666")}
-            ${makeTank("DarkTitanium2","",390,120,80,40,"#7d6666")}
-
-            ${makeTank("OrangeOil","OrangeOil",625,120,80,40,"#dd6600")}
-            ${makeTank("OrangeOil2","",705,120,80,40,"#dd6600")}
-
-            ${makeTank("Almite","AlmiteSealerLiquid",0,180,60,275,"#777","vertical")}
-
-            ${makeTank("20Black","20.Black",270,200,80,50,"#111")}
-            ${makeTank("20Black2","",350,200,40,50,"#111")}
-
-            ${makeTank("1DarkRedB","1.DarkRed",270,252,80,35,"darkred")}
-            ${makeTank("1DarkRedB2","",350,252,40,35,"darkred")}
-
-            ${makeTank("7Pink","7.Pink",380,210,85,130,"magenta","vertical")}
-
-            ${makeTank("RO4","RO",380,355,85,90,"#d7ffff","ro")}
-
-            ${makeTank("HotSeal","HotSeal H60",540,190,85,130,"#777")}
-            ${makeTank("11Gold","11.Gold",540,325,85,120,"#d4af00","vertical")}
-
-            ${makeTank("RO5","RO",625,190,90,125,"#d7ffff","ro")}
-            ${makeTank("RO6","RO",625,320,90,125,"#d7ffff","ro")}
-
-            ${makeTank("1DarkRedA","1.Dark Red",785,200,65,55,"darkred")}
-            ${makeTank("19Copper","19.Copper",785,257,65,55,"#d9a27f")}
-            ${makeTank("12Titanium","12.Titanium",785,314,65,55,"#777")}
-            ${makeTank("14RoseGold","14.Rose Gold",785,371,65,55,"plum")}
-
-            ${makeTank("RO7","RO",850,200,85,110,"#d7ffff","ro")}
-            ${makeTank("RO8","RO",850,312,85,114,"#d7ffff","ro")}
-
-            ${makeTank("Sodium1","Sodium Bicarbonate",990,80,85,65,"#ccc")}
-            ${makeTank("Sodium2","Sodium Bicarbonate",990,147,85,65,"#ccc")}
-
-            ${makeTank("RO9","RO",990,215,85,80,"#d7ffff","ro")}
-
-            ${makeTank("Nitric","Nitric Acid68",960,360,110,65,"#b89b00")}
-
-            ${makeTank("Anodize","AnodizedPPool1",890,520,140,190,"#ccc","vertical")}
-
+        <div class="tank" style="left:0px;top:0px;width:80px;height:80px;background:#111;">
+            5.Black
         </div>
-        `
 
-        let root = window.parent.document.querySelector('section.main')
+        <div class="tank" style="left:140px;top:0px;width:70px;height:80px;background:red;">
+            2.Red
+        </div>
 
-        let old = root.querySelector('#factory-map')
+        <div class="tank" style="left:210px;top:0px;width:60px;height:80px;background:purple;">
+            3.Violet
+        </div>
 
-        if(old) old.remove()
+        <div class="tank" style="left:295px;top:0px;width:70px;height:80px;background:green;">
+            8.Green
+        </div>
 
-        let div = document.createElement('div')
-        div.id='factory-map'
-        div.innerHTML = html
+        <div class="tank" style="left:365px;top:0px;width:65px;height:80px;background:#222;">
+            17.Black
+        </div>
 
-        root.prepend(div)
+        <div class="tank" style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;">
+            15.Gold
+        </div>
 
-    })()
-    """)
+        <div class="tank" style="left:525px;top:0px;width:65px;height:80px;background:orange;">
+            9.Orange
+        </div>
 
-    return clicked
+        <div class="tank" style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">
+            10.Light Blue
+        </div>
+
+        <div class="tank" style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">
+            6.Banana
+        </div>
+
+        <div class="tank" style="left:785px;top:0px;width:70px;height:80px;background:blue;">
+            16.Blue
+        </div>
+
+        <div class="tank" style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">
+            4.DarkBlue
+        </div>
+
+        <div class="tank ro" style="left:140px;top:82px;width:130px;height:65px;">
+            RO
+        </div>
+
+        <div class="tank ro" style="left:455px;top:82px;width:130px;height:65px;">
+            RO
+        </div>
+
+        <div class="tank ro" style="left:785px;top:82px;width:130px;height:65px;">
+            RO
+        </div>
+
+        <div class="tank vertical" style="left:0px;top:180px;width:60px;height:275px;background:#777;">
+            AlmiteSealerLiquid
+        </div>
+
+        <div class="tank" style="left:270px;top:200px;width:80px;height:50px;background:#111;">
+            20.Black
+        </div>
+
+        <div class="tank" style="left:270px;top:252px;width:80px;height:35px;background:darkred;">
+            1.DarkRed
+        </div>
+
+        <div class="tank vertical" style="left:380px;top:210px;width:85px;height:130px;background:magenta;">
+            7.Pink
+        </div>
+
+        <div class="tank" style="left:540px;top:190px;width:85px;height:130px;background:#777;">
+            HotSeal
+        </div>
+
+        <div class="tank vertical" style="left:540px;top:325px;width:85px;height:120px;background:#d4af00;">
+            11.Gold
+        </div>
+
+        <div class="tank" style="left:785px;top:200px;width:65px;height:55px;background:darkred;">
+            1.DarkRed
+        </div>
+
+        <div class="tank" style="left:785px;top:257px;width:65px;height:55px;background:#d9a27f;">
+            19.Copper
+        </div>
+
+        <div class="tank" style="left:785px;top:314px;width:65px;height:55px;background:#777;">
+            12.Titanium
+        </div>
+
+        <div class="tank" style="left:785px;top:371px;width:65px;height:55px;background:plum;">
+            14.RoseGold
+        </div>
+
+        <div class="tank vertical" style="left:890px;top:520px;width:140px;height:190px;background:#ccc;color:black;">
+            AnodizedPPool1
+        </div>
+
+    </div>
+
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
