@@ -101,28 +101,32 @@ def get_quarter_range(year, quarter):
     return start_date, end_date
 #============================================================================================
 def render_tank_map():
+    # สร้าง HTML ที่ส่งค่ากลับมาหา Streamlit ผ่านปุ่มจริง
     html_code = f"""
     <style>
-        .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }}
-        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; cursor:pointer; }}
-        .tank:hover {{ opacity: 0.7; border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }}
+        .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; }}
+        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; cursor:pointer; transition: 0.2s; }}
+        .tank:hover {{ border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }}
     </style>
     <div class="plant-map">
-        <div class="tank" style="left:10px;top:10px;width:70px;height:70px;background:#111;" onclick="clickTank('5Black')">5Black</div>
-        <div class="tank" style="left:140px;top:10px;width:65px;height:70px;background:red;" onclick="clickTank('2Red')">2Red</div>
-        <div class="tank" style="left:205px;top:10px;width:65px;height:70px;background:purple;" onclick="clickTank('3Violet')">3Violet</div>
-        </div>
+        <div class="tank" style="left:10px;top:10px;width:70px;height:70px;background:#111;" onclick="sendToStreamlit('5Black')">5Black</div>
+        <div class="tank" style="left:140px;top:10px;width:65px;height:70px;background:red;" onclick="sendToStreamlit('2Red')">2Red</div>
+        <div class="tank" style="left:205px;top:10px;width:65px;height:70px;background:purple;" onclick="sendToStreamlit('3Violet')">3Violet</div>
+    </div>
 
     <script>
-        function clickTank(name) {{
-            // ส่งค่ากลับไปที่ Python ผ่านตัวแปร window.parent.stValue
-            // นี่คือวิธีที่ Streamlit JavaScript Component มักใช้
-            const data = {{
-                type: "streamlit:setComponentValue",
-                value: name
-            }};
-            window.parent.postMessage(data, "*");
+    function sendToStreamlit(tankName) {{
+        // ค้นหาปุ่มของ Streamlit ที่เราซ่อนไว้ แล้วสั่งคลิก
+        const buttons = window.parent.document.querySelectorAll('button');
+        for (const btn of buttons) {{
+            if (btn.innerText === "INTERNAL_CLICK_TRIGGER") {{
+                // เก็บชื่อบ่อไว้ใน window object ของหน้าหลัก
+                window.parent.selectedTank = tankName;
+                btn.click();
+                break;
+            }}
         }}
+    }}
     </script>
     """
     components.html(html_code, height=750)
@@ -523,32 +527,28 @@ if menu == "Dashboard":
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
-    
-    # สร้าง Key สำหรับคุม State ของ JS
-    if 'js_key' not in st.session_state:
-        st.session_state.js_key = 0
-    if 'last_clicked' not in st.session_state:
-        st.session_state.last_clicked = None
 
-    # 1. ดักฟังค่าจากแผนผัง (ใช้ st_javascript ดักจับ Event)
-    # เราจะรันตัวดักฟังก่่อน เพื่อเตรียมพร้อมรับค่า
-    clicked_name = stjs.st_javascript("""
-        window.parent.addEventListener('message', function(e) {
-            if (e.data.type === 'streamlit:setComponentValue') {
-                return e.data.value;
-            }
-        }, {once: true});
-    """, key=f"js_listener_{st.session_state.js_key}")
+    # 1. สร้างปุ่มลับ (ซ่อนไว้ไม่ให้คนเห็น แต่ให้ JS เห็น)
+    # ใช้สไตล์ CSS ซ่อนปุ่มไว้
+    st.markdown("""
+        <style>
+        div.stButton > button:first-child { display: none; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # ปุ่มนี้คือตัวที่ JS จะมาสั่ง .click()
+    trigger = st.button("INTERNAL_CLICK_TRIGGER")
 
     # 2. แสดงแผนผัง
     render_tank_map()
 
-    # 3. เช็คว่ามีการคลิกจริงไหม และไม่ใช่ค่าเดิมที่เคยค้างอยู่
-    if clicked_name and isinstance(clicked_name, str):
-        # บันทึกลง session เพื่อป้องกันการเด้งซ้ำแบบไร้สาเหตุ
-        st.session_state.last_clicked = clicked_name
-        # เรียก Modal
-        record_modal(clicked_name)
+    # 3. เมื่อมีการกดปุ่มลับ (จาก JS) ให้ไปดึงค่าชื่อบ่อมา
+    if trigger:
+        # ใช้ JavaScript ดึงค่าที่ฝากไว้ใน window.parent.selectedTank
+        clicked_name = stjs.st_javascript("window.parent.selectedTank;")
+        
+        if clicked_name and isinstance(clicked_name, str):
+            record_modal(clicked_name)
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
