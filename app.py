@@ -105,7 +105,7 @@ def render_tank_map():
     def t_div(name, top, left, w, h, bg, text_color="white"):
         return f"""
         <div class="tank"
-            onclick="sendTank('{name}')"
+            onclick="sendTank(this.innerText)"
             style="
                 left:{left}px;
                 top:{top}px;
@@ -138,10 +138,13 @@ def render_tank_map():
         border:2px solid #999;
         margin:auto;
         overflow:hidden;
+        pointer-events:auto;
     }}
 
     .tank {{
         position:absolute;
+        z-index:10;
+        user-select:none;
         border:1px solid #444;
         border-radius:4px;
         font-size:11px;
