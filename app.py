@@ -539,15 +539,7 @@ if menu == "บันทึกข้อมูลการผลิต":
 
     if "tank" in params:
         st.session_state.selected_tank = params["tank"]
-
-    if clicked_tank:
-        st.session_state.selected_tank = clicked_tank
-    # ถ้าใน Session มีค่าบ่อที่เลือกไว้ ให้เปิด Modal ค้างไว้เลย
     st.info("💡 คลิกที่ชื่อบ่อเพื่อบันทึกข้อมูล")
-
-    if clicked_tank:
-        st.session_state.selected_tank = clicked_tank
-
     if st.session_state.get("selected_tank"):
         record_modal(st.session_state.selected_tank)
         
