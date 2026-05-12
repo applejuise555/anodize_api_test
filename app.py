@@ -101,57 +101,74 @@ def get_quarter_range(year, quarter):
     return start_date, end_date
 #============================================================================================
 def render_tank_map():
-    # โค้ด HTML/CSS เหมือนเดิม แต่เปลี่ยน onclick เป็น parent.postMessage
-    html_code = """
+    def t_div(name, top, left, w, h, bg, extra=""):
+        # ใช้ JavaScript เปลี่ยน URL ของหน้าหลักโดยตรงเพื่อให้ Streamlit จับค่าได้
+        return f"""
+        <div class="tank {extra}" 
+             onclick="const url = new URL(window.parent.location.href); url.searchParams.set('tank', '{name}'); window.parent.location.href = url.href;"
+             style="left:{left}px;top:{top}px;width:{w}px;height:{h}px;background:{bg};cursor:pointer;">
+            {name}
+        </div>"""
+
+    html_code = f"""
     <style>
-        .plant-map { position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }
-        .tank { position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; cursor:pointer; }
-        .tank:hover { opacity: 0.7; border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }
+        .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }}
+        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; }}
+        .tank:hover {{ opacity: 0.7; border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }}
+        .vertical {{ writing-mode:vertical-rl; text-orientation:mixed; font-size:16px; }}
     </style>
     <div class="plant-map">
-        <div class="tank" style="left:10px;top:10px;width:70px;height:70px;background:#111;" onclick="parent.postMessage({type: 'tank_click', name: '5Black'}, '*')">5Black</div>
-        <div class="tank" style="left:140px;top:10px;width:65px;height:70px;background:red;" onclick="parent.postMessage({type: 'tank_click', name: '2Red'}, '*')">2Red</div>
-        <div class="tank" style="left:205px;top:10px;width:65px;height:70px;background:purple;" onclick="parent.postMessage({type: 'tank_click', name: '3Violet'}, '*')">3Violet</div>
-        </div>
+        {t_div("5Black", 10, 10, 70, 70, "#111")}
+        {t_div("2Red", 10, 140, 65, 70, "red")}
+        {t_div("3Violet", 10, 205, 65, 70, "purple")}
+        {t_div("8Green", 10, 290, 65, 70, "green")}
+        {t_div("17Black", 10, 355, 65, 70, "#222")}
+        {t_div("15Gold", 10, 440, 65, 70, "#d4af00")}
+        {t_div("9Orange", 10, 505, 65, 70, "orange")}
+        {t_div("10LightBlue", 10, 600, 65, 70, "cyan", "color:black;")}
+        {t_div("6BananaLeafGreen", 10, 665, 65, 70, "#7fff00", "color:black;")}
+        {t_div("16Blue", 10, 760, 65, 70, "blue")}
+        {t_div("4DarkBlue", 10, 825, 65, 70, "darkblue")}
+        {t_div("20Black", 245, 260, 75, 45, "#111")}
+        {t_div("1DarkRedA", 295, 260, 75, 45, "darkred")}
+        {t_div("7Pink", 245, 360, 80, 160, "magenta", "vertical")}
+        {t_div("HotSealH60", 250, 520, 80, 160, "#666")}
+        {t_div("11Gold", 415, 520, 80, 160, "#cc9900", "vertical")}
+        {t_div("AnodizedPPool1", 660, 860, 130, 230, "#ccc", "vertical; color:black;")}
+    </div>
     """
     components.html(html_code, height=750)
 # --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent เรียบร้อย ---
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
     st.write(f"### 📍 บ่อ: {tank_name}")
-    is_anodize = "Anodized" in tank_name or "PPool" in tank_name or "17Black" in tank_name
+    is_anodize = "Anodized" in tank_name or "PPool" in tank_name
     
     with st.form("modal_record_form", clear_on_submit=True):
         if not is_anodize:
-            # --- Input บ่อสี ---
             ph = st.number_input("ค่า pH (Color)", step=0.01, format="%.2f", value=5.50)
             temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=30.0)
             submit = st.form_submit_button("💾 บันทึกบ่อสี")
             
             if submit:
                 try:
-                    # ดึง ID บ่อ
-                    res = supabase.table("tanks").select("tank_id").eq("tank_name", tank_name).single().execute()
-                    if res.data:
+                    all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
+                    if tank_name in all_tanks:
                         supabase.table("color_tank_logs").insert({
-                            "tank_id": res.data["tank_id"],
+                            "tank_id": all_tanks[tank_name],
                             "ph_value": ph,
                             "temperature": temp,
                             "recorded_at": datetime.now(ICT).isoformat()
                         }).execute()
                         st.success("บันทึกสำเร็จ!")
-                        
-                        # ล้างค่าเพื่อให้ฟอร์มปิด
-                        st.session_state.selected_tank = None
-                        st.query_params.clear() 
+                        st.query_params.clear() # ปิดหน้าต่างโดยล้าง URL
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("ไม่พบข้อมูลบ่อนี้ในฐานข้อมูล")
+                        st.error(f"ไม่พบข้อมูลบ่อ {tank_name} ในระบบ")
                 except Exception as e:
                     st.error(f"Error: {e}")
         else:
-            # --- Input บ่ออโนไดซ์ ---
             ph_a = st.number_input("ค่า pH (Anodize)", step=0.01, format="%.2f", value=1.20)
             temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
             den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", value=1.000)
@@ -159,31 +176,25 @@ def record_modal(tank_name):
             
             if submit_ano:
                 try:
-                    res = supabase.table("tanks").select("tank_id").eq("tank_name", tank_name).single().execute()
-                    if res.data:
+                    all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
+                    if tank_name in all_tanks:
                         supabase.table("anodize_tank_logs").insert({
-                            "tank_id": res.data["tank_id"],
+                            "tank_id": all_tanks[tank_name],
                             "ph_value": ph_a,
                             "temperature": temp_a,
                             "density": den_a,
                             "recorded_at": datetime.now(ICT).isoformat()
                         }).execute()
                         st.success("บันทึกสำเร็จ!")
-                        
-                        # --- ล้างค่าเพื่อให้ฟอร์มปิด (ย้ายเข้ามาอยู่ใน try ให้ถูกที่) ---
-                        st.session_state.selected_tank = None
-                        st.session_state.js_key = st.session_state.get('js_key', 0) + 1
                         st.query_params.clear()
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("ไม่พบข้อมูลบ่อนี้ในฐานข้อมูล")
+                        st.error(f"ไม่พบข้อมูลบ่อ {tank_name}")
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ปุ่มปิดหน้าต่าง (อยู่นอก st.form แต่อยู่ในระดับเดียวกับ with st.form)
     if st.button("❌ ปิดหน้าต่าง"):
-        st.session_state.selected_tank = None
         st.query_params.clear()
         st.rerun()
 #=================================================================   
@@ -461,31 +472,18 @@ if menu == "Dashboard":
             pass
 
 # ================= RECORD PAGE =================
+menu = st.sidebar.radio("เมนู", ["Dashboard", "บันทึกข้อมูลการผลิต"])
+
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
+    
+    # ดึงค่าจาก URL ว่ามีการคลิกบ่อไหนมา
+    clicked_tank = st.query_params.get("tank")
+    
+    if clicked_tank:
+        record_modal(clicked_tank)
 
-    # 1. ใช้ JavaScript ดักฟังการคลิก (วิธีนี้จะเสถียรที่สุดสำหรับ Iframe)
-    # เราจะใช้ key ที่เปลี่ยนไปเรื่อยๆ เพื่อให้มัน Re-listen เสมอ
-    js_key = st.session_state.get('js_key', 0)
-    result = stjs.st_javascript("""
-        await new Promise(resolve => {
-            window.addEventListener('message', (event) => {
-                if (event.data.type === 'tank_click') {
-                    resolve(event.data.name);
-                }
-            }, { once: true });
-        });
-    """, key=f"listener_{js_key}")
-
-    # 2. ถ้ามีการคลิก ให้เก็บค่าลง Session State
-    if result and result != 0:
-        st.session_state.selected_tank = result
-
-    # 3. ถ้าใน Session มีค่า ให้เปิด Modal ค้างไว้
-    if st.session_state.get("selected_tank"):
-        record_modal(st.session_state.selected_tank)
-
-    st.info("💡 คลิกที่ชื่อบ่อในแผนผังด้านล่างเพื่อบันทึกข้อมูล")
+    st.info("💡 คลิกที่ชื่อบ่อในแผนผังเพื่อบันทึกข้อมูล")
     render_tank_map()
     st.markdown("---")
     
