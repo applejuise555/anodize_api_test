@@ -98,9 +98,42 @@ def get_quarter_range(year, quarter):
     else:
         end_date = datetime(year, end_month + 1, 1) - timedelta(days=1)
     return start_date, end_date
-
-import streamlit.components.v1 as components
-
+#======================================================
+@st.dialog("บันทึกข้อมูลบ่อ")
+def record_modal(tank_name):
+    st.subheader(f"📍 บ่อ: {tank_name}")
+    is_anodize = "Anodized" in tank_name or "Anodize" in tank_name
+    
+    if not is_anodize:
+        with st.form("modal_color_form", clear_on_submit=True):
+            ph = st.number_input("ค่า pH", step=0.1, format="%.2f", value=5.5)
+            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=35.0)
+            if st.form_submit_button("💾 บันทึก"):
+                color_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
+                if tank_name in color_tanks:
+                    supabase.table("color_tank_logs").insert({
+                        "tank_id": color_tanks[tank_name], "ph_value": ph,
+                        "temperature": temp, "recorded_at": datetime.now(ICT).isoformat()
+                    }).execute()
+                    st.success("บันทึกสำเร็จ!")
+                    time.sleep(1)
+                    st.rerun()
+    else:
+        with st.form("modal_ano_form", clear_on_submit=True):
+            ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f", value=1.20)
+            temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
+            den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", value=1.000)
+            if st.form_submit_button("💾 บันทึก"):
+                ano_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
+                if tank_name in ano_tanks:
+                    supabase.table("anodize_tank_logs").insert({
+                        "tank_id": ano_tanks[tank_name], "ph_value": ph_a,
+                        "temperature": temp_a, "density": den_a, "recorded_at": datetime.now(ICT).isoformat()
+                    }).execute()
+                    st.success("บันทึกสำเร็จ!")
+                    time.sleep(1)
+                    st.rerun()
+#============================================================================================
 def render_tank_map():
     # Helper สำหรับสร้าง HTML Div ของแต่ละบ่อ
     def t_div(name, top, left, w, h, bg, extra=""):
@@ -180,57 +213,6 @@ def render_tank_map():
         }, false);
     """)
     return clicked_name
-
-# --- ฟังก์ชัน Popup สำหรับกรอกข้อมูล (วางไว้ส่วนบนของไฟล์) ---
-@st.dialog("บันทึกข้อมูลบ่อ")
-def record_modal(tank_name):
-    st.subheader(f"📍 บ่อ: {tank_name}")
-    
-    # ตรวจสอบว่าเป็นบ่อประเภทไหน (บ่ออโนไดซ์จะมีคำว่า Anodized ในชื่อ)
-    is_anodize = "Anodized" in tank_name or "Anodize" in tank_name
-    
-    if not is_anodize:
-        # --- ฟอร์มสำหรับบ่อสี ---
-        # ดึงสีจากชื่อบ่อเพื่อแสดงแถบสี (เช่น "2.Red" -> "Red")
-        tank_key = tank_name.split('.')[-1].strip() if '.' in tank_name else tank_name
-        render_color_bar(tank_key) 
-        
-        with st.form("modal_color_form", clear_on_submit=True):
-            ph = st.number_input("ค่า pH", step=0.1, format="%.2f", value=5.5)
-            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=35.0)
-            if st.form_submit_button("💾 บันทึกข้อมูลสี"):
-                color_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
-                if tank_name in color_tanks:
-                    supabase.table("color_tank_logs").insert({
-                        "tank_id": color_tanks[tank_name],
-                        "ph_value": ph,
-                        "temperature": temp,
-                        "recorded_at": datetime.now(ICT).isoformat()
-                    }).execute()
-                    st.success(f"บันทึก {tank_name} เรียบร้อย!")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("ไม่พบชื่อบ่อนี้ในระบบฐานข้อมูล")
-    else:
-        # --- ฟอร์มสำหรับบ่ออโนไดซ์ ---
-        with st.form("modal_ano_form", clear_on_submit=True):
-            ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f", value=1.20)
-            temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
-            den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", value=1.000)
-            if st.form_submit_button("💾 บันทึกข้อมูลอโนไดซ์"):
-                ano_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
-                if tank_name in ano_tanks:
-                    supabase.table("anodize_tank_logs").insert({
-                        "tank_id": ano_tanks[tank_name],
-                        "ph_value": ph_a,
-                        "temperature": temp_a,
-                        "density": den_a,
-                        "recorded_at": datetime.now(ICT).isoformat()
-                    }).execute()
-                    st.success(f"บันทึก {tank_name} เรียบร้อย!")
-                    time.sleep(1)
-                    st.rerun()
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
