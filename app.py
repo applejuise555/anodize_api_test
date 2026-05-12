@@ -518,7 +518,7 @@ if menu == "บันทึกข้อมูลการผลิต":
     st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
     
     if "selected_tank" not in st.session_state:
-    st.session_state["selected_tank"] = None
+        st.session_state["selected_tank"] = None
 
     render_tank_map()
     
