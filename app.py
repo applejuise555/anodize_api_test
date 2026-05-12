@@ -101,19 +101,27 @@ def get_quarter_range(year, quarter):
         end_date = datetime(year, end_month + 1, 1) - timedelta(days=1)
     return start_date, end_date
 
-# --- แก้ไขฟังก์ชัน render_svg_map เพื่อ Debug --
+# --- Interactive Tank Map ---
 def render_tank_map():
 
+    st.subheader("🗺️ ผังบ่อ (คลิกเพื่อเลือกบ่อ)")
+
+    # โหลดรูป
     img = Image.open("ผังบ่อplain.png")
 
+    # แสดงรูป + รับพิกัดคลิก
     value = streamlit_image_coordinates(
         img,
-        key="tank_map"
+        key="tank_map",
+        width=1000
     )
 
     clicked_id = None
 
-    if value:
+    # DEBUG
+    st.write("CLICK COORD =", value)
+
+    if value is not None:
 
         x = value["x"]
         y = value["y"]
@@ -189,6 +197,7 @@ def render_tank_map():
             clicked_id = "Anodize tank 1"
 
     return clicked_id
+#=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
 # ================= DASHBOARD (FULL SYSTEM VIEW) =================
