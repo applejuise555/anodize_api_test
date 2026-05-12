@@ -175,7 +175,7 @@ def render_tank_map():
     """
     clicked = components.html(html, height=750)
 
-return clicked
+    return clicked
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
