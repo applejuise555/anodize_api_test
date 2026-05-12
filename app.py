@@ -577,7 +577,7 @@ if menu == "บันทึกข้อมูลการผลิต":
         selected_tank_name = st.selectbox(
             "ยืนยันบ่อสี",
             tank_list,
-            index=default_index,
+            index=0,
             key="color_select"
         )
     
