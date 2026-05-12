@@ -14,7 +14,7 @@ import streamlit.components.v1 as components
 import streamlit_javascript as stjs
 import plotly.graph_objects as go
 import streamlit as st
-
+from streamlit_plotly_events import plotly_events
 
 # 1. ตั้งค่า Timezone (UTC +7)
 ICT = timezone(timedelta(hours=7))
@@ -128,13 +128,19 @@ def render_tank_map():
         height=700,
         clickmode="event+select",
         xaxis=dict(visible=False, range=[0, 1000]),
-        yaxis=dict(visible=False, range=[0, 800])
+        yaxis=dict(visible=False, range=[0, 800]),
+        dragmode=False   # 🔥 กัน zoom
     )
 
-    event = st.plotly_chart(fig, use_container_width=True, key="scada")
+    clicked = plotly_events(
+        fig,
+        click_event=True,
+        select_event=False,
+        override_height=700,
+        key="scada_map"
+    )
 
-    return event
-
+    return clicked
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
@@ -466,24 +472,21 @@ if menu == "บันทึกข้อมูลการผลิต":
 
     # ===== INIT STATE =====
     if "selected_tank" not in st.session_state:
-        st.session_state["selected_tank"] = None
+    st.session_state["selected_tank"] = None
 
-    # ===== RENDER MAP =====
-    event = render_tank_map()
-
-    # ===== HANDLE CLICK =====
-    if event:
+    clicked = render_tank_map()
+    
+    # 🔥 ดึงค่าคลิก
+    if clicked:
         try:
-            selected = event["selection"]["points"][0]["customdata"]
-            if selected:
-                st.session_state["selected_tank"] = selected
+            tank_name = clicked[0]["customdata"][0]
+            st.session_state["selected_tank"] = tank_name
         except:
             pass
-
-    # ===== SHOW MODAL =====
+    
+    # 🔥 เปิดฟอร์ม
     if st.session_state["selected_tank"]:
         record_modal(st.session_state["selected_tank"])
-
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
