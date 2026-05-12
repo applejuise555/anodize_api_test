@@ -102,10 +102,10 @@ def get_quarter_range(year, quarter):
 #============================================================================================
 def render_tank_map():
     def t_div(name, top, left, w, h, bg, extra=""):
-        # ใช้ JavaScript เปลี่ยน URL ของหน้าหลักโดยตรงเพื่อให้ Streamlit จับค่าได้
+        # ใช้ parent.postMessage ส่งชื่อบ่อออกไปตรงๆ
         return f"""
         <div class="tank {extra}" 
-             onclick="const url = new URL(window.parent.location.href); url.searchParams.set('tank', '{name}'); window.parent.location.href = url.href;"
+             onclick="window.parent.postMessage('{name}', '*')"
              style="left:{left}px;top:{top}px;width:{w}px;height:{h}px;background:{bg};cursor:pointer;">
             {name}
         </div>"""
@@ -115,26 +115,12 @@ def render_tank_map():
         .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }}
         .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; }}
         .tank:hover {{ opacity: 0.7; border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }}
-        .vertical {{ writing-mode:vertical-rl; text-orientation:mixed; font-size:16px; }}
     </style>
     <div class="plant-map">
         {t_div("5Black", 10, 10, 70, 70, "#111")}
         {t_div("2Red", 10, 140, 65, 70, "red")}
         {t_div("3Violet", 10, 205, 65, 70, "purple")}
-        {t_div("8Green", 10, 290, 65, 70, "green")}
-        {t_div("17Black", 10, 355, 65, 70, "#222")}
-        {t_div("15Gold", 10, 440, 65, 70, "#d4af00")}
-        {t_div("9Orange", 10, 505, 65, 70, "orange")}
-        {t_div("10LightBlue", 10, 600, 65, 70, "cyan", "color:black;")}
-        {t_div("6BananaLeafGreen", 10, 665, 65, 70, "#7fff00", "color:black;")}
-        {t_div("16Blue", 10, 760, 65, 70, "blue")}
-        {t_div("4DarkBlue", 10, 825, 65, 70, "darkblue")}
-        {t_div("20Black", 245, 260, 75, 45, "#111")}
-        {t_div("1DarkRedA", 295, 260, 75, 45, "darkred")}
-        {t_div("7Pink", 245, 360, 80, 160, "magenta", "vertical")}
-        {t_div("HotSealH60", 250, 520, 80, 160, "#666")}
-        {t_div("11Gold", 415, 520, 80, 160, "#cc9900", "vertical")}
-        {t_div("AnodizedPPool1", 660, 860, 130, 230, "#ccc", "vertical; color:black;")}
+        {t_div("11Gold", 415, 520, 80, 160, "#cc9900")}
     </div>
     """
     components.html(html_code, height=750)
@@ -186,6 +172,7 @@ def record_modal(tank_name):
                             "recorded_at": datetime.now(ICT).isoformat()
                         }).execute()
                         st.success("บันทึกสำเร็จ!")
+                        st.session_state.selected_tank = None
                         st.query_params.clear()
                         time.sleep(1)
                         st.rerun()
@@ -472,20 +459,29 @@ if menu == "Dashboard":
             pass
 
 # ================= RECORD PAGE =================
-# 1. จัดการ Query Params ก่อนเริ่มวาด UI
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
-    
-    # ดึงค่าจาก URL
-    clicked_tank = st.query_params.get("tank")
-    
-    # 2. ตรวจสอบว่ามีค่าใน URL และยังไม่ได้เปิด Modal หรือเปล่า 
-    # (ป้องกันการเปิดซ้ำซ้อนจน Error)
-    if clicked_tank:
-        # เรียก Modal
-        record_modal(clicked_tank)
 
-    # 3. วาดแผนผังด้านล่างเสมอ
+    # ใช้ JavaScript ดักฟัง event 'message'
+    # เมื่อมีการคลิกบ่อใน iframe มันจะส่งชื่อบ่อมาที่นี่
+    clicked_name = stjs.st_javascript("""
+        await new Promise(resolve => {
+            window.addEventListener('message', (event) => {
+                if (typeof event.data === 'string') {
+                    resolve(event.data);
+                }
+            }, { once: true });
+        });
+    """)
+
+    # ถ้ามีค่าส่งมา ให้เก็บใส่ session_state ไว้กันหายตอน Rerun
+    if clicked_name and clicked_name != 0:
+        st.session_state.selected_tank = clicked_name
+
+    # ตรวจสอบว่าใน session_state มีการเลือกบ่อไว้ไหม ถ้ามีให้เปิด Modal
+    if st.session_state.get("selected_tank"):
+        record_modal(st.session_state.selected_tank)
+
     st.info("💡 คลิกที่ชื่อบ่อในแผนผังเพื่อบันทึกข้อมูล")
     render_tank_map()
     st.markdown("---")
