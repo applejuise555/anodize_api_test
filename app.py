@@ -10,7 +10,7 @@ import time
 import streamlit as st
 from streamlit_javascript import st_javascript
 from streamlit_js_eval import streamlit_js_eval
-
+import streamlit.components.v1 as components
 
 
 # 1. ตั้งค่า Timezone (UTC +7)
@@ -99,10 +99,17 @@ def get_quarter_range(year, quarter):
         end_date = datetime(year, end_month + 1, 1) - timedelta(days=1)
     return start_date, end_date
 
+import streamlit.components.v1 as components
+
 def render_tank_map():
 
-    st.markdown("""
+    html = """
     <style>
+
+    body{
+        margin:0;
+        padding:0;
+    }
 
     .plant-map{
         position:relative;
@@ -124,6 +131,7 @@ def render_tank_map():
         text-align:center;
         border:1px solid #555;
         box-sizing:border-box;
+        font-family:Arial;
     }
 
     .vertical{
@@ -137,9 +145,7 @@ def render_tank_map():
     }
 
     </style>
-    """, unsafe_allow_html=True)
 
-    html = """
     <div class="plant-map">
 
         <!-- TOP ROW -->
@@ -280,7 +286,7 @@ def render_tank_map():
     </div>
     """
 
-    st.markdown(html, unsafe_allow_html=True)
+    components.html(html, height=750, scrolling=False)
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
