@@ -197,14 +197,29 @@ def render_tank_map():
     </div>
     """
 
-    clicked = components.html(html_code, height=750)
-
+    components.html(html_code, height=750)
+    
+    clicked = st_javascript("""
+    await new Promise((resolve) => {
+        window.addEventListener("message", (event) => {
+            if (event.data.type === "streamlit:setComponentValue") {
+                resolve(event.data.value);
+            }
+        }, {once:true});
+    })
+    """)
+    
     return clicked
 # --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent เรียบร้อย ---
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
     st.write(f"### 📍 บ่อ: {tank_name}")
-    is_anodize = "Anodized" in tank_name or "PPool" in tank_name
+    tank_name = str(tank_name)
+
+    is_anodize = (
+        "Anodize" in tank_name
+        or "PPool" in tank_name
+    )
     
     with st.form("modal_record_form", clear_on_submit=True):
         if not is_anodize:
@@ -543,15 +558,12 @@ if menu == "บันทึกข้อมูลการผลิต":
     # ถ้าใน Session มีค่าบ่อที่เลือกไว้ ให้เปิด Modal ค้างไว้เลย
     st.info("💡 คลิกที่ชื่อบ่อเพื่อบันทึกข้อมูล")
 
-    clicked_tank = render_tank_map()
-
     if clicked_tank:
         st.session_state.selected_tank = clicked_tank
 
     if st.session_state.get("selected_tank"):
         record_modal(st.session_state.selected_tank)
-    render_tank_map()
-    
+        
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
     sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
     with sub_prod:
