@@ -249,7 +249,6 @@ def record_modal(tank_name):
                         }).execute()
                         st.success("บันทึกสำเร็จ!")
                         st.session_state.selected_tank = None
-                        st.query_params.clear()
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -259,7 +258,6 @@ def record_modal(tank_name):
 
     if st.button("❌ ปิดหน้าต่าง"):
         st.session_state.selected_tank = None
-        st.query_params.clear()
         st.rerun()
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
@@ -543,10 +541,15 @@ if menu == "บันทึกข้อมูลการผลิต":
     if clicked_tank:
         st.session_state.selected_tank = clicked_tank
     # ถ้าใน Session มีค่าบ่อที่เลือกไว้ ให้เปิด Modal ค้างไว้เลย
+    st.info("💡 คลิกที่ชื่อบ่อเพื่อบันทึกข้อมูล")
+
+    clicked_tank = render_tank_map()
+
+    if clicked_tank:
+        st.session_state.selected_tank = clicked_tank
+
     if st.session_state.get("selected_tank"):
         record_modal(st.session_state.selected_tank)
-
-    st.info("💡 คลิกที่ชื่อบ่อเพื่อบันทึกข้อมูล")
     render_tank_map()
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
