@@ -218,48 +218,60 @@ def record_modal(tank_name):
                     st.session_state.js_key += 1
             time.sleep(1)
             st.rerun()
+#----------------------------------------------------------------------------------            
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
     st.write(f"### 📍 บ่อ: {tank_name}")
+    
     is_anodize = "Anodized" in tank_name or "PPool" in tank_name
     
-    with st.form("modal_record_form", clear_on_submit=True):
+    # สร้างฟอร์มเพียงฟอร์มเดียว แล้วใช้ if-else แบ่ง input ข้างใน
+    with st.form("modal_form"):
         if not is_anodize:
-            ph = st.number_input("ค่า pH (Color)", step=0.01, format="%.2f", value=5.50)
-            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=30.0)
-            submit = st.form_submit_button("💾 บันทึกบ่อสี")
-            
-            if submit:
-                all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
-                if tank_name in all_tanks:
-                    supabase.table("color_tank_logs").insert({
-                        "tank_id": all_tanks[tank_name],
-                        "ph_value": ph, "temperature": temp,
-                        "recorded_at": datetime.now(ICT).isoformat()
-                    }).execute()
-                    st.success("บันทึกสำเร็จ!")
-                    st.session_state.js_key += 1 # เปลี่ยน Key เพื่อให้แผนผังพร้อมรับคลิกใหม่
-                    time.sleep(1)
-                    st.rerun() # สั่ง rerun เฉพาะตอนบันทึกเสร็จเท่านั้น
+            # --- Input สำหรับบ่อสี ---
+            ph = st.number_input("ค่า pH (Color)", value=5.50, step=0.01)
+            temp = st.number_input("อุณหภูมิ (°C)", value=30.0, step=0.1)
+            btn_text = "💾 บันทึกบ่อสี"
         else:
-            # --- ส่วนบ่ออโนไดซ์ ---
-            ph_a = st.number_input("ค่า pH (Anodize)", step=0.01, format="%.2f", value=1.20)
-            temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
-            den_a = st.number_input("ความหนาแน่น", step=0.001, format="%.3f", value=1.000)
-            submit_ano = st.form_submit_button("💾 บันทึกอโนไดซ์")
+            # --- Input สำหรับบ่ออโนไดซ์ ---
+            ph = st.number_input("ค่า pH (Anodize)", value=1.20, step=0.01)
+            temp = st.number_input("อุณหภูมิ (°C)", value=20.0, step=0.1)
+            density = st.number_input("ความหนาแน่น", value=1.000, step=0.001)
+            btn_text = "💾 บันทึกอโนไดซ์"
             
-            if submit_ano:
-                all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
-                if tank_name in all_tanks:
-                    supabase.table("anodize_tank_logs").insert({
-                        "tank_id": all_tanks[tank_name],
-                        "ph_value": ph_a, "temperature": temp_a, "density": den_a,
-                        "recorded_at": datetime.now(ICT).isoformat()
-                    }).execute()
-                    st.success("บันทึกสำเร็จ!")
-                    st.session_state.js_key += 1
-                    time.sleep(1)
-                    st.rerun()
+        submitted = st.form_submit_button(btn_text)
+        
+        if submitted:
+            # --- Logic การบันทึกลง Supabase ---
+            try:
+                if not is_anodize:
+                    all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
+                    if tank_name in all_tanks:
+                        supabase.table("color_tank_logs").insert({
+                            "tank_id": all_tanks[tank_name],
+                            "ph_value": ph,
+                            "temperature": temp,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                else:
+                    all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
+                    if tank_name in all_tanks:
+                        supabase.table("anodize_tank_logs").insert({
+                            "tank_id": all_tanks[tank_name],
+                            "ph_value": ph,
+                            "temperature": temp,
+                            "density": density,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                
+                st.success("บันทึกข้อมูลสำเร็จ!")
+                # เพิ่มค่า js_key เพื่อล้างค่าคลิกเก่าใน JavaScript
+                st.session_state.js_key += 1
+                time.sleep(0.5)
+                st.rerun() # สั่ง rerun เฉพาะเมื่อบันทึกสำเร็จ
+                
+            except Exception as e:
+                st.error(f"Error: {e}")
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
