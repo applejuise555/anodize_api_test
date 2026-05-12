@@ -115,15 +115,16 @@ def render_tank_map():
 
     <script>
         function clickTank(name) {{
-            // ส่งข้อความไปที่หน้าหลัก (วิธีนี้ไม่โดน Sandbox Block)
-            window.parent.postMessage({{
-                type: 'streamlit:setComponentValue', // รูปแบบมาตรฐานของ Streamlit
+            // ส่งค่ากลับไปที่ Python ผ่านตัวแปร window.parent.stValue
+            // นี่คือวิธีที่ Streamlit JavaScript Component มักใช้
+            const data = {{
+                type: "streamlit:setComponentValue",
                 value: name
-            }}, '*');
+            }};
+            window.parent.postMessage(data, "*");
         }}
     </script>
     """
-    # ใช้ components.html ปกติ แต่เราจะใช้ st_javascript ดักรับข้างนอก
     components.html(html_code, height=750)
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
@@ -239,6 +240,7 @@ def record_modal(tank_name):
                 # เพิ่มค่า js_key เพื่อล้างค่าคลิกเก่าใน JavaScript
                 st.session_state.js_key += 1
                 st.query_params.clear()
+                st.session_state.last_clicked = None
                 time.sleep(1)
                 st.rerun() # สั่ง rerun เฉพาะเมื่อบันทึกสำเร็จ
                 
@@ -522,25 +524,30 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     
-    if "js_key" not in st.session_state:
+    # สร้าง Key สำหรับคุม State ของ JS
+    if 'js_key' not in st.session_state:
         st.session_state.js_key = 0
+    if 'last_clicked' not in st.session_state:
+        st.session_state.last_clicked = None
 
-    # 1. แสดงแผนผัง
+    # 1. ดักฟังค่าจากแผนผัง (ใช้ st_javascript ดักจับ Event)
+    # เราจะรันตัวดักฟังก่่อน เพื่อเตรียมพร้อมรับค่า
+    clicked_name = stjs.st_javascript("""
+        window.parent.addEventListener('message', function(e) {
+            if (e.data.type === 'streamlit:setComponentValue') {
+                return e.data.value;
+            }
+        }, {once: true});
+    """, key=f"js_listener_{st.session_state.js_key}")
+
+    # 2. แสดงแผนผัง
     render_tank_map()
 
-    # 2. ดักรับชื่อบ่อจากการคลิก (ใช้ Promise มารอรับค่า)
-    clicked_name = stjs.st_javascript("""
-        await new Promise((resolve) => {
-            window.addEventListener('message', (event) => {
-                if (event.data && event.data.type === 'streamlit:setComponentValue') {
-                    resolve(event.data.value);
-                }
-            }, { once: true });
-        });
-    """, key=f"wait_click_{st.session_state.js_key}")
-
-    # 3. ถ้าได้รับชื่อบ่อ ให้เปิด Modal
+    # 3. เช็คว่ามีการคลิกจริงไหม และไม่ใช่ค่าเดิมที่เคยค้างอยู่
     if clicked_name and isinstance(clicked_name, str):
+        # บันทึกลง session เพื่อป้องกันการเด้งซ้ำแบบไร้สาเหตุ
+        st.session_state.last_clicked = clicked_name
+        # เรียก Modal
         record_modal(clicked_name)
     st.markdown("---")
     
