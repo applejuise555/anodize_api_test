@@ -472,7 +472,7 @@ if menu == "Dashboard":
             pass
 
 # ================= RECORD PAGE =================
-menu = st.sidebar.radio("เมนู", ["Dashboard", "บันทึกข้อมูลการผลิต"])
+
 
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
