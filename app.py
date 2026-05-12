@@ -101,99 +101,30 @@ def get_quarter_range(year, quarter):
     return start_date, end_date
 #============================================================================================
 def render_tank_map():
-    # สร้าง HTML ที่ส่งค่ากลับมาหา Streamlit ผ่านปุ่มจริง
     html_code = f"""
     <style>
         .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; }}
-        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; cursor:pointer; transition: 0.2s; }}
-        .tank:hover {{ border: 3px solid yellow !important; transform: scale(1.05); z-index: 100; }}
+        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; cursor:pointer; transition: 0.1s; }}
+        .tank:hover {{ border: 3px solid yellow !important; filter: brightness(1.2); }}
     </style>
     <div class="plant-map">
-        <div class="tank" style="left:10px;top:10px;width:70px;height:70px;background:#111;" onclick="sendToStreamlit('5Black')">5Black</div>
-        <div class="tank" style="left:140px;top:10px;width:65px;height:70px;background:red;" onclick="sendToStreamlit('2Red')">2Red</div>
-        <div class="tank" style="left:205px;top:10px;width:65px;height:70px;background:purple;" onclick="sendToStreamlit('3Violet')">3Violet</div>
+        <div class="tank" style="left:10px;top:10px;width:70px;height:70px;background:#111;" onclick="clickTank('5Black')">5Black</div>
+        <div class="tank" style="left:140px;top:10px;width:65px;height:70px;background:red;" onclick="clickTank('2Red')">2Red</div>
+        <div class="tank" style="left:205px;top:10px;width:65px;height:70px;background:purple;" onclick="clickTank('3Violet')">3Violet</div>
     </div>
 
     <script>
-    function sendToStreamlit(tankName) {{
-        // ค้นหาปุ่มของ Streamlit ที่เราซ่อนไว้ แล้วสั่งคลิก
-        const buttons = window.parent.document.querySelectorAll('button');
-        for (const btn of buttons) {{
-            if (btn.innerText === "INTERNAL_CLICK_TRIGGER") {{
-                // เก็บชื่อบ่อไว้ใน window object ของหน้าหลัก
-                window.parent.selectedTank = tankName;
-                btn.click();
-                break;
-            }}
+        function clickTank(name) {{
+            // ใช้การเปลี่ยน URL ของหน้าหลักโดยตรง 
+            // วิธีนี้ Streamlit จะตรวจเจอค่า 'tank' ใน URL ทันทีที่คลิก
+            const url = new URL(window.parent.location.href);
+            url.searchParams.set('tank', name);
+            window.parent.location.href = url.href;
         }}
-    }}
     </script>
     """
     components.html(html_code, height=750)
 #=================================================================================
-@st.dialog("บันทึกข้อมูลบ่อ")
-def record_modal(tank_name):
-    st.write(f"### 📍 บ่อ: {tank_name}")
-    
-    # 1. เช็คประเภทบ่อจากชื่อ
-    is_anodize = "Anodized" in tank_name or "PPool" in tank_name
-    
-    # 2. เริ่มสร้างฟอร์ม (ใช้ชื่อฟอร์มเดียวเพื่อความง่าย หรือแยกตามประเภท)
-    with st.form("modal_record_form", clear_on_submit=True):
-        if not is_anodize:
-            # --- ส่วนของบ่อสี ---
-            ph = st.number_input("ค่า pH (Color)", step=0.01, format="%.2f", value=5.50)
-            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=30.0)
-            
-            if st.form_submit_button("💾 บันทึกบ่อสี"):
-                all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
-                if tank_name in all_tanks:
-                    try:
-                        supabase.table("color_tank_logs").insert({
-                            "tank_id": all_tanks[tank_name],
-                            "ph_value": ph,
-                            "temperature": temp,
-                            "recorded_at": datetime.now(ICT).isoformat()
-                        }).execute()
-                        
-                        st.success("บันทึกบ่อสีสำเร็จ!")
-                        st.query_params.clear() 
-                        time.sleep(0.5)
-                        st.rerun() # รันใหม่เพื่อล้างค่าทิ้งหลังจากบันทึกเสร็จเท่านั้น
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาด: {e}")
-                else:
-                    st.error(f"ไม่พบชื่อบ่อ '{tank_name}' ในฐานข้อมูล (ประเภท Color)")
-
-        else:
-            # --- ส่วนของบ่ออโนไดซ์ ---
-            ph_a = st.number_input("ค่า pH (Anodize)", step=0.01, format="%.2f", value=1.20)
-            temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
-            den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", value=1.000)
-            
-            if st.form_submit_button("💾 บันทึกอโนไดซ์"):
-                all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
-                if tank_name in all_tanks:
-                    try:
-                        supabase.table("anodize_tank_logs").insert({
-                            "tank_id": all_tanks[tank_name],
-                            "ph_value": ph_a,
-                            "temperature": temp_a,
-                            "density": den_a,
-                            "recorded_at": datetime.now(ICT).isoformat()
-                        }).execute()
-                        
-                        st.success("บันทึกอโนไดซ์สำเร็จ!")
-                        st.session_state['js_key'] = st.session_state.get('js_key', 0) + 1
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาด: {e}")
-                else:
-                    st.error(f"ไม่พบชื่อบ่อ '{tank_name}' ในฐานข้อมูล (ประเภท Anodize)")
-                    st.session_state.js_key += 1
-            time.sleep(1)
-            st.rerun()
 #----------------------------------------------------------------------------------            
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
@@ -241,15 +172,15 @@ def record_modal(tank_name):
                         }).execute()
                 
                 st.success("บันทึกข้อมูลสำเร็จ!")
-                # เพิ่มค่า js_key เพื่อล้างค่าคลิกเก่าใน JavaScript
-                st.session_state.js_key += 1
-                st.query_params.clear()
-                st.session_state.last_clicked = None
-                time.sleep(1)
-                st.rerun() # สั่ง rerun เฉพาะเมื่อบันทึกสำเร็จ
-                
-            except Exception as e:
-                st.error(f"Error: {e}")
+                    # --- ล้างค่า URL เพื่อปิดฟอร์มและกลับสู่หน้าปกติ ---
+                st.query_params.clear() 
+                time.sleep(0.5)
+                st.rerun()
+
+    # เพิ่มปุ่ม "ยกเลิก" แยกออกมา (ถ้าต้องการ)
+    if st.button("❌ ปิดหน้าต่าง"):
+        st.query_params.clear()
+        st.rerun()
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
@@ -528,27 +459,16 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
 
-    # 1. สร้างปุ่มลับ (ซ่อนไว้ไม่ให้คนเห็น แต่ให้ JS เห็น)
-    # ใช้สไตล์ CSS ซ่อนปุ่มไว้
-    st.markdown("""
-        <style>
-        div.stButton > button:first-child { display: none; }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # ปุ่มนี้คือตัวที่ JS จะมาสั่ง .click()
-    trigger = st.button("INTERNAL_CLICK_TRIGGER")
+    # 1. เช็คทันทีว่าใน URL มีชื่อบ่อไหม (ตรวจจาก st.query_params)
+    # วิธีนี้ Native และเร็วที่สุด ไม่ต้องรอ JS ทำงาน
+    clicked_tank = st.query_params.get("tank")
 
-    # 2. แสดงแผนผัง
+    if clicked_tank:
+        # ถ้าเจอชื่อบ่อ ให้เปิด Dialog ทันที
+        record_modal(clicked_tank)
+
+    # 2. แสดงแผนผังด้านล่าง
     render_tank_map()
-
-    # 3. เมื่อมีการกดปุ่มลับ (จาก JS) ให้ไปดึงค่าชื่อบ่อมา
-    if trigger:
-        # ใช้ JavaScript ดึงค่าที่ฝากไว้ใน window.parent.selectedTank
-        clicked_name = stjs.st_javascript("window.parent.selectedTank;")
-        
-        if clicked_name and isinstance(clicked_name, str):
-            record_modal(clicked_name)
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
