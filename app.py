@@ -185,8 +185,8 @@ def render_tank_map():
     .plant-map {{ position:relative; width:1100px; height:700px; }}
     </style>
     """
-    render_tank_map()
-    clicked = st.session_state["selected_tank"]
+    components.html(html, height=750)
+    return None
 
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
@@ -516,15 +516,16 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
-    if "selected_tank" not in st.session_state:
-        st.session_state["selected_tank"] = None
-    clicked = render_tank_map()
-
-    if clicked_tank:
-        st.session_state["selected_tank"] = clicked_tank
     
-    if st.session_state.get("selected_tank"):
-        record_modal(st.session_state["selected_tank"])
+    if "selected_tank" not in st.session_state:
+    st.session_state["selected_tank"] = None
+
+    render_tank_map()
+    
+    clicked = st.session_state.get("selected_tank")
+    
+    if clicked:
+        record_modal(clicked)
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
