@@ -104,7 +104,7 @@ def render_tank_map():
     def t_div(name, top, left, w, h, bg, extra=""):
         return f"""
         <div class="tank {extra}"
-             onclick="window.streamlit_js_eval.setItem('selected_tank', '{name}')"
+             onclick="Streamlit.setComponentValue('{name}')"
              style="left:{left}px;top:{top}px;width:{w}px;height:{h}px;background:{bg};cursor:pointer;">
             {name}
         </div>
@@ -173,45 +173,9 @@ def render_tank_map():
         {t_div("18OrangeOil", 100, 670, 45, 45, "#d35400", "oil")}
     </div>
     """
-    clicked_tank = components.html(
-    f"""
-    <script>
-    const tanks = document.querySelectorAll('.tank');
-    tanks.forEach(t => {{
-        t.onclick = () => {{
-            const value = t.innerText;
-            window.parent.postMessage({{
-                isStreamlitMessage: true,
-                type: "streamlit:setComponentValue",
-                value: value
-            }}, "*");
-        }};
-    }});
-    </script>
-    {html}
-    """,
-    height=750,
-    )
-    clicked_tank = stjs.st_javascript("""
-    document.querySelectorAll('.tank').forEach(el => {
-        onclick="window.parent.postMessage({
-            isStreamlitMessage: true,
-            type: 'streamlit:setComponentValue',
-            value: '{name}'
-        }, '*')"
-        }
-    });
-    """)
+    clicked = components.html(html, height=750)
 
-    # ดักจับ Event คลิกและส่งกลับ Streamlit
-    val = st_javascript("""
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'streamlit:setComponentValue') {
-                return event.data.value;
-            }
-        }, {once: false});
-    """)
-    return val
+return clicked
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
@@ -537,7 +501,8 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
-
+    if "selected_tank" not in st.session_state:
+        st.session_state["selected_tank"] = None
     clicked_tank = render_tank_map()
 
     if clicked_tank:
