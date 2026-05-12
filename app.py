@@ -171,9 +171,22 @@ def render_tank_map():
         {t_div("18OrangeOil", 100, 610, 45, 45, "#d35400", "oil")}
         {t_div("18OrangeOil", 100, 670, 45, 45, "#d35400", "oil")}
     </div>
+    <script>
+    function send(value){{
+        window.parent.postMessage({{
+            isStreamlitMessage: true,
+            type: "streamlit:setComponentValue",
+            value: value
+        }}, "*");
+    }}
+    </script>
+
+    <style>
+    .plant-map {{ position:relative; width:1100px; height:700px; }}
+    </style>
     """
-    components.html(html, height=750)
-    return clicked
+    render_tank_map()
+    clicked = st.session_state["selected_tank"]
 
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
