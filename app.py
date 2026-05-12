@@ -173,8 +173,25 @@ def render_tank_map():
         {t_div("18OrangeOil", 100, 670, 45, 45, "#d35400", "oil")}
     </div>
     """
-    clicked_tank = components.html(html, height=750)
-    
+    clicked_tank = components.html(
+    f"""
+    <script>
+    const tanks = document.querySelectorAll('.tank');
+    tanks.forEach(t => {{
+        t.onclick = () => {{
+            const value = t.innerText;
+            window.parent.postMessage({{
+                isStreamlitMessage: true,
+                type: "streamlit:setComponentValue",
+                value: value
+            }}, "*");
+        }};
+    }});
+    </script>
+    {html}
+    """,
+    height=750,
+    )
     clicked_tank = stjs.st_javascript("""
     document.querySelectorAll('.tank').forEach(el => {
         onclick="window.parent.postMessage({
@@ -521,12 +538,13 @@ if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
 
-    render_tank_map()
-
-    clicked_tank = st.session_state.get("selected_tank")
+    clicked_tank = render_tank_map()
 
     if clicked_tank:
-        record_modal(clicked_tank)
+        st.session_state["selected_tank"] = clicked_tank
+    
+    if st.session_state.get("selected_tank"):
+        record_modal(st.session_state["selected_tank"])
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
