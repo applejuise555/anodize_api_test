@@ -141,21 +141,16 @@ def render_tank_map():
     """
     components.html(html_code, height=750)
 
-   js_key = st.session_state.get('js_key', 0)
-    
-    # ปรับ JS ให้ดักฟังตลอดเวลาจนกว่าจะได้รับค่า
+    # --- ส่วนที่เกิด Error อยู่ตรงนี้ (จัดย่อหน้าใหม่ให้ตรงกัน) ---
+    js_key = st.session_state.get('js_key', 0)
     clicked_name = st_javascript("""
-        (function() {
-            return new Promise((resolve) => {
-                const handler = (event) => {
-                    if (event.data.type === 'tank_click') {
-                        window.removeEventListener('message', handler);
-                        resolve(event.data.name);
-                    }
-                };
-                window.addEventListener('message', handler);
-            });
-        })()
+        new Promise((resolve) => {
+            window.addEventListener('message', function(event) {
+                if (event.data.type === 'tank_click') {
+                    resolve(event.data.name);
+                }
+            }, { once: true });
+        });
     """, key=f"tank_clicker_{js_key}")
     
     return clicked_name
