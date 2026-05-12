@@ -165,6 +165,7 @@ def render_tank_map():
     </div>
     """
     components.html(html, height=750)
+    return clicked
 
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
@@ -496,7 +497,7 @@ if menu == "บันทึกข้อมูลการผลิต":
     st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
     if "selected_tank" not in st.session_state:
         st.session_state["selected_tank"] = None
-    clicked_tank = render_tank_map()
+    clicked = render_tank_map()
 
     if clicked_tank:
         st.session_state["selected_tank"] = clicked_tank
