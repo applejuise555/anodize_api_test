@@ -11,8 +11,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_javascript import st_javascript
 from streamlit_js_eval import streamlit_js_eval
-from PIL import Image
-from streamlit_image_coordinates import streamlit_image_coordinates
+
 
 
 # 1. ตั้งค่า Timezone (UTC +7)
@@ -101,102 +100,171 @@ def get_quarter_range(year, quarter):
         end_date = datetime(year, end_month + 1, 1) - timedelta(days=1)
     return start_date, end_date
 
-# --- Interactive Tank Map ---
 def render_tank_map():
 
-    st.subheader("🗺️ ผังบ่อ (คลิกเพื่อเลือกบ่อ)")
+    svg_html = """
+    <html>
 
-    # โหลดรูป
-    img = Image.open("ผังบ่อplain.png")
+    <body style="margin:0; padding:0;">
 
-    # แสดงรูป + รับพิกัดคลิก
-    value = streamlit_image_coordinates(
-        img,
-        key="tank_map",
-        width=1000
+    <svg
+        viewBox="0 0 1100 800"
+        width="100%"
+        height="800"
+        xmlns="http://www.w3.org/2000/svg"
+    >
+
+    <style>
+
+    .tank{
+        fill: rgba(0, 100, 255, 0.20);
+        stroke: #222;
+        stroke-width: 2;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .tank:hover{
+        fill: rgba(0,255,0,0.45);
+    }
+
+    .label{
+        font-size:14px;
+        font-family:Arial;
+        fill:black;
+        pointer-events:none;
+    }
+
+    </style>
+
+    <!-- ===== TOP ROW ===== -->
+
+    <!-- 5Black -->
+    <rect
+        class="tank"
+        x="20"
+        y="30"
+        width="80"
+        height="50"
+        onclick="sendTank('5Black')"
+    />
+
+    <text class="label" x="28" y="60">
+        5Black
+    </text>
+
+    <!-- 2Red -->
+    <rect
+        class="tank"
+        x="140"
+        y="30"
+        width="80"
+        height="50"
+        onclick="sendTank('2Red')"
+    />
+
+    <text class="label" x="155" y="60">
+        2Red
+    </text>
+
+    <!-- 3Violet -->
+    <rect
+        class="tank"
+        x="240"
+        y="30"
+        width="80"
+        height="50"
+        onclick="sendTank('3Violet')"
+    />
+
+    <text class="label" x="248" y="60">
+        3Violet
+    </text>
+
+    <!-- 8Green -->
+    <rect
+        class="tank"
+        x="340"
+        y="30"
+        width="80"
+        height="50"
+        onclick="sendTank('8Green')"
+    />
+
+    <text class="label" x="350" y="60">
+        8Green
+    </text>
+
+    <!-- ===== MIDDLE ===== -->
+
+    <!-- 13DarkTitanium -->
+    <rect
+        class="tank"
+        x="360"
+        y="110"
+        width="120"
+        height="60"
+        onclick="sendTank('13DarkTitanium')"
+    />
+
+    <text class="label" x="365" y="145">
+        13DarkTitanium
+    </text>
+
+    <!-- ===== BOTTOM ===== -->
+
+    <!-- 20Black -->
+    <rect
+        class="tank"
+        x="250"
+        y="260"
+        width="120"
+        height="60"
+        onclick="sendTank('20Black')"
+    />
+
+    <text class="label" x="270" y="295">
+        20Black
+    </text>
+
+    <!-- ===== ANODIZE ===== -->
+
+    <rect
+        class="tank"
+        x="900"
+        y="620"
+        width="150"
+        height="80"
+        onclick="sendTank('Anodize tank 1')"
+    />
+
+    <text class="label" x="920" y="665">
+        Anodize tank 1
+    </text>
+
+    <script>
+
+    function sendTank(tank){
+
+        window.parent.postMessage({
+            type: "streamlit:setComponentValue",
+            value: tank
+        }, "*");
+
+    }
+
+    </script>
+
+    </svg>
+
+    </body>
+    </html>
+    """
+
+    return components.html(
+        svg_html,
+        height=850
     )
-
-    clicked_id = None
-
-    # DEBUG
-    st.write("CLICK COORD =", value)
-
-    if value is not None:
-
-        x = value["x"]
-        y = value["y"]
-
-        # ===== แถวบน =====
-        if 0 <= x <= 70 and 20 <= y <= 90:
-            clicked_id = "5Black"
-
-        elif 120 <= x <= 210 and 20 <= y <= 90:
-            clicked_id = "2Red"
-
-        elif 210 <= x <= 280 and 20 <= y <= 90:
-            clicked_id = "3Violet"
-
-        elif 290 <= x <= 360 and 20 <= y <= 90:
-            clicked_id = "8Green"
-
-        elif 360 <= x <= 450 and 20 <= y <= 90:
-            clicked_id = "17Black"
-
-        elif 460 <= x <= 540 and 20 <= y <= 90:
-            clicked_id = "15Gold"
-
-        elif 540 <= x <= 620 and 20 <= y <= 90:
-            clicked_id = "9Orange"
-
-        elif 630 <= x <= 700 and 20 <= y <= 90:
-            clicked_id = "10LightBlue"
-
-        elif 700 <= x <= 770 and 20 <= y <= 90:
-            clicked_id = "6BananaLeafGreen"
-
-        elif 780 <= x <= 850 and 20 <= y <= 90:
-            clicked_id = "16Blue"
-
-        elif 860 <= x <= 940 and 20 <= y <= 90:
-            clicked_id = "4DarkBlue"
-
-        # ===== แถวกลาง =====
-        elif 320 <= x <= 420 and 70 <= y <= 140:
-            clicked_id = "13DarkTitanium"
-
-        elif 640 <= x <= 760 and 70 <= y <= 140:
-            clicked_id = "18OrangeOil"
-
-        # ===== แถวล่าง =====
-        elif 240 <= x <= 360 and 200 <= y <= 260:
-            clicked_id = "20Black"
-
-        elif 240 <= x <= 360 and 250 <= y <= 320:
-            clicked_id = "1DarkRedB"
-
-        elif 380 <= x <= 500 and 220 <= y <= 300:
-            clicked_id = "7Pink"
-
-        elif 520 <= x <= 660 and 350 <= y <= 440:
-            clicked_id = "11Gold"
-
-        elif 760 <= x <= 900 and 200 <= y <= 270:
-            clicked_id = "1DarkRedA"
-
-        elif 760 <= x <= 900 and 280 <= y <= 340:
-            clicked_id = "19Copper"
-
-        elif 760 <= x <= 900 and 350 <= y <= 410:
-            clicked_id = "12Titanium"
-
-        elif 760 <= x <= 900 and 410 <= y <= 470:
-            clicked_id = "14RoseGold"
-
-        # ===== Anodize =====
-        elif 930 <= x <= 1070 and 600 <= y <= 720:
-            clicked_id = "Anodize tank 1"
-
-    return clicked_id
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
