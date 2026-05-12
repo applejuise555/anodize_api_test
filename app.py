@@ -167,18 +167,14 @@ def render_tank_map():
     components.html(html, height=750)
 
     # ดักจับ Event คลิกและส่งกลับ Streamlit
-    clicked_name = st_javascript("""
+    val = st_javascript("""
         window.addEventListener('message', function(event) {
-            if (event.data.type === 'tank_click') {
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: event.data.name
-                }, '*');
+            if (event.data.type === 'streamlit:setComponentValue') {
+                return event.data.value;
             }
-        }, false);
+        }, {once: false});
     """)
-    return clicked_name
-
+    return val
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
@@ -501,25 +497,22 @@ if menu == "Dashboard":
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
-    
-    # ดึงค่าจากการคลิก
-    clicked_name = render_tank_map()
-    
-    # ตรวจสอบว่ามีการคลิก และชื่อบ่อไม่ใช่ RO หรือค่าว่าง
-    if clicked_name and clicked_name != 0 and clicked_name != "RO":
+    st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
+
+    # เรียกใช้แผนผัง
+    clicked_tank = render_tank_map()
+
+    # แก้ปัญหาค่าจาก st_javascript ชอบคืนค่าเป็น 0 หรือ None ตอนโหลดครั้งแรก
+    if clicked_tank and clicked_tank != 0 and clicked_tank != "RO":
+        # บันทึกชื่อบ่อลง session_state เพื่อความเสถียร
+        st.session_state["selected_tank"] = clicked_tank
         # เรียกเปิด Modal ทันที
-        record_modal(str(clicked_name))
-        
-        # ล้างค่าใน JS (ทางเทคนิค) เพื่อให้คลิกซ้ำบ่อเดิมได้ในครั้งต่อไป
-        # โดยการ rerun เล็กน้อย (ทางเลือก)
-        if st.button("🔄 ล้างการเลือก (คลิกหลังบันทึกเสร็จ)"):
-            st.rerun()
+        record_modal(st.session_state["selected_tank"])
 
     st.markdown("---")
+    
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
     sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
-    
-    # ... โค้ดที่เหลือใน with sub_prod, sub_jig, sub_log ของคุณ ...
     with sub_prod:
         st.subheader("เพิ่มสินค้าใหม่ลงระบบ")
         shape = st.selectbox("📐 เลือกรูปทรง", ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง"], key="shape_sel")
