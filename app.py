@@ -111,6 +111,15 @@ def render_tank_map():
         </div>"""
 
     html = f"""
+        <script>
+        function sendValue(name) {{
+            window.parent.postMessage({{
+                isStreamlitMessage: true,
+                type: "streamlit:setComponentValue",
+                value: name
+            }}, "*");
+        }}
+    </script>
     <style>
         .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }}
         .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; }}
@@ -164,7 +173,7 @@ def render_tank_map():
         {t_div("18OrangeOil", 100, 670, 45, 45, "#d35400", "oil")}
     </div>
     """
-    components.html(html, height=750)
+    return components.html(html, height=750)
 
     # ดักจับ Event คลิกและส่งกลับ Streamlit
     val = st_javascript("""
@@ -499,15 +508,11 @@ if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล pH และอุณหภูมิ")
 
-    # เรียกใช้แผนผัง
     clicked_tank = render_tank_map()
 
-    # แก้ปัญหาค่าจาก st_javascript ชอบคืนค่าเป็น 0 หรือ None ตอนโหลดครั้งแรก
-    if clicked_tank and clicked_tank != 0 and clicked_tank != "RO":
-        # บันทึกชื่อบ่อลง session_state เพื่อความเสถียร
+    if clicked_tank:
         st.session_state["selected_tank"] = clicked_tank
-        # เรียกเปิด Modal ทันที
-        record_modal(st.session_state["selected_tank"])
+        record_modal(clicked_tank)
 
     st.markdown("---")
     
