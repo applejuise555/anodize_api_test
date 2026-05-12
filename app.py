@@ -104,129 +104,147 @@ def render_tank_map():
     st.markdown("""
     <style>
 
-    div.stButton > button {
-        width: 100%;
-        height: 70px;
-        border-radius: 12px;
-        font-size: 16px;
-        font-weight: bold;
-        border: 2px solid #333;
+    .map-container{
+        position:relative;
+        width:1100px;
+        height:700px;
+        background-image:url("https://i.imgur.com/yourmap.png");
+        background-size:contain;
+        background-repeat:no-repeat;
+        border:2px solid #999;
+    }
+
+    div.stButton > button{
+        width:100%;
+        height:100%;
+        border-radius:10px;
+        font-size:12px;
+        font-weight:bold;
+        opacity:0.85;
     }
 
     </style>
     """, unsafe_allow_html=True)
 
+    clicked = None
+
     # ===== TOP ROW =====
+
     c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11 = st.columns(11)
 
     with c1:
         if st.button("5Black"):
-            return "5Black"
+            clicked = "5Black"
 
     with c2:
         if st.button("2Red"):
-            return "2Red"
+            clicked = "2Red"
 
     with c3:
         if st.button("3Violet"):
-            return "3Violet"
+            clicked = "3Violet"
 
     with c4:
         if st.button("8Green"):
-            return "8Green"
+            clicked = "8Green"
 
     with c5:
         if st.button("17Black"):
-            return "17Black"
+            clicked = "17Black"
 
     with c6:
         if st.button("15Gold"):
-            return "15Gold"
+            clicked = "15Gold"
 
     with c7:
         if st.button("9Orange"):
-            return "9Orange"
+            clicked = "9Orange"
 
     with c8:
         if st.button("10LightBlue"):
-            return "10LightBlue"
+            clicked = "10LightBlue"
 
     with c9:
         if st.button("6BananaLeafGreen"):
-            return "6BananaLeafGreen"
+            clicked = "6BananaLeafGreen"
 
     with c10:
         if st.button("16Blue"):
-            return "16Blue"
+            clicked = "16Blue"
 
     with c11:
         if st.button("4DarkBlue"):
-            return "4DarkBlue"
+            clicked = "4DarkBlue"
 
     st.write("")
 
-    # ===== MIDDLE =====
+    # ===== MID =====
+
     m1,m2,m3,m4,m5,m6,m7,m8 = st.columns(8)
 
     with m3:
         if st.button("13DarkTitanium"):
-            return "13DarkTitanium"
+            clicked = "13DarkTitanium"
 
     with m6:
         if st.button("18OrangeOil"):
-            return "18OrangeOil"
+            clicked = "18OrangeOil"
 
+    st.write("")
+    st.write("")
     st.write("")
 
     # ===== BOTTOM =====
+
     b1,b2,b3,b4,b5,b6,b7,b8 = st.columns(8)
 
     with b2:
         if st.button("20Black"):
-            return "20Black"
+            clicked = "20Black"
 
     with b3:
         if st.button("1DarkRedB"):
-            return "1DarkRedB"
+            clicked = "1DarkRedB"
 
     with b4:
         if st.button("7Pink"):
-            return "7Pink"
+            clicked = "7Pink"
 
     with b5:
         if st.button("11Gold"):
-            return "11Gold"
+            clicked = "11Gold"
 
     with b6:
         if st.button("1DarkRedA"):
-            return "1DarkRedA"
+            clicked = "1DarkRedA"
 
     with b7:
         if st.button("19Copper"):
-            return "19Copper"
+            clicked = "19Copper"
 
     with b8:
         if st.button("12Titanium"):
-            return "12Titanium"
+            clicked = "12Titanium"
 
-    # ===== LAST ROW =====
+    st.write("")
+
     x1,x2,x3,x4,x5,x6,x7,x8 = st.columns(8)
 
     with x8:
         if st.button("14RoseGold"):
-            return "14RoseGold"
+            clicked = "14RoseGold"
 
     st.write("")
     st.write("")
+    st.write("")
 
-    # ===== ANODIZE =====
     a1,a2,a3,a4,a5,a6,a7,a8,a9,a10 = st.columns(10)
 
     with a10:
         if st.button("Anodize tank 1"):
-            return "Anodize tank 1"
+            clicked = "Anodize tank 1"
 
-    return None
+    return clicked
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
@@ -506,12 +524,12 @@ if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
     
         # ดึงค่า ID จากการคลิก
-    clicked_id = render_tank_map()
-    if clicked_id:
-        st.session_state["clicked_tank"] = clicked_id
+    new_click = render_tank_map()
 
-    clicked_id = st.session_state.get("clicked_tank", None)
+    if new_click is not None:
+        st.session_state["clicked_tank"] = new_click
 
+    clicked_id = st.session_state.get("clicked_tank")
     st.write("CLICK =", clicked_id)
     tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่ออโนไดซ์ (Anodize)", "งานจิ๊ก (Jig System)"])
 
@@ -533,16 +551,18 @@ if menu == "บันทึกข้อมูลการผลิต":
         default_index = 0
     
         if clean_clicked_id in tank_list:
+            st.session_state["color_select"] = clean_clicked_id
             default_index = tank_list.index(clean_clicked_id)
             st.success(f"📍 บ่อที่เลือกจากผัง: {clean_clicked_id}")
-    
+        
         elif clean_clicked_id:
             st.warning(f"⚠️ ไม่พบบ่อ {clean_clicked_id}")
     
         selected_tank_name = st.selectbox(
             "ยืนยันบ่อสี",
             tank_list,
-            index=default_index
+            index=default_index,
+            key="color_select"
         )
     
         detected_color = TANK_COLOR_MAP.get(selected_tank_name, "Black")
@@ -577,7 +597,12 @@ if menu == "บันทึกข้อมูลการผลิต":
         if ano_tanks:
             ano_list = list(ano_tanks.keys())
             idx_ano = ano_list.index(default_ano) if default_ano in ano_list else 0
-            sel_ano = st.selectbox("ยืนยันบ่ออโนไดซ์", ano_list, index=idx_ano)
+            sel_ano = st.selectbox(
+                "ยืนยันบ่ออโนไดซ์",
+                ano_list,
+                index=idx_ano,
+                key="ano_select"
+            )
             
             with st.form("ano_form", clear_on_submit=True):
                 ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f")
