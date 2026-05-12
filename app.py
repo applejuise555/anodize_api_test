@@ -522,18 +522,25 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     
+    if "js_key" not in st.session_state:
+        st.session_state.js_key = 0
+
     # 1. แสดงแผนผัง
     render_tank_map()
 
-    # 2. อ่านค่าจาก URL (ถ้ามีการคลิก URL จะเปลี่ยน)
-    query_params = st.query_params
-    clicked_name = query_params.get("selected_tank")
+    # 2. ดักรับชื่อบ่อจากการคลิก (ใช้ Promise มารอรับค่า)
+    clicked_name = stjs.st_javascript("""
+        await new Promise((resolve) => {
+            window.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'streamlit:setComponentValue') {
+                    resolve(event.data.value);
+                }
+            }, { once: true });
+        });
+    """, key=f"wait_click_{st.session_state.js_key}")
 
-    if clicked_name:
-        # ล้างค่าใน URL ทันทีเพื่อไม่ให้ Modal เด้งค้างหลังปิด
-        # st.query_params.clear() 
-        
-        # เปิดฟอร์ม
+    # 3. ถ้าได้รับชื่อบ่อ ให้เปิด Modal
+    if clicked_name and isinstance(clicked_name, str):
         record_modal(clicked_name)
     st.markdown("---")
     
