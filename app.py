@@ -115,12 +115,11 @@ def render_tank_map():
         </div>
     """
     components.html(html_code, height=750)
-#=================================================================================
-# --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข SyntaxError และย่อหน้า ---
+# --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent เรียบร้อย ---
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
     st.write(f"### 📍 บ่อ: {tank_name}")
-    is_anodize = "Anodized" in tank_name or "PPool" in tank_name
+    is_anodize = "Anodized" in tank_name or "PPool" in tank_name or "17Black" in tank_name
     
     with st.form("modal_record_form", clear_on_submit=True):
         if not is_anodize:
@@ -141,7 +140,10 @@ def record_modal(tank_name):
                             "recorded_at": datetime.now(ICT).isoformat()
                         }).execute()
                         st.success("บันทึกสำเร็จ!")
-                        st.query_params.clear() # ล้างค่าใน URL เพื่อปิดฟอร์ม
+                        
+                        # ล้างค่าเพื่อให้ฟอร์มปิด
+                        st.session_state.selected_tank = None
+                        st.query_params.clear() 
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -167,15 +169,21 @@ def record_modal(tank_name):
                             "recorded_at": datetime.now(ICT).isoformat()
                         }).execute()
                         st.success("บันทึกสำเร็จ!")
-                        # --- ล้างค่าเพื่อให้ฟอร์มปิด ---
-                st.session_state.selected_tank = None
-                st.session_state.js_key = st.session_state.get('js_key', 0) + 1
-                time.sleep(0.5)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-    # ปุ่มปิดหน้าต่าง (อยู่นอกฟอร์ม แต่อยู่ในระดับเดียวกับ with st.form)
+                        
+                        # --- ล้างค่าเพื่อให้ฟอร์มปิด (ย้ายเข้ามาอยู่ใน try ให้ถูกที่) ---
+                        st.session_state.selected_tank = None
+                        st.session_state.js_key = st.session_state.get('js_key', 0) + 1
+                        st.query_params.clear()
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("ไม่พบข้อมูลบ่อนี้ในฐานข้อมูล")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # ปุ่มปิดหน้าต่าง (อยู่นอก st.form แต่อยู่ในระดับเดียวกับ with st.form)
     if st.button("❌ ปิดหน้าต่าง"):
+        st.session_state.selected_tank = None
         st.query_params.clear()
         st.rerun()
 #=================================================================   
