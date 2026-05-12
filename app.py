@@ -110,85 +110,85 @@ def render_tank_map():
         img,
         key="tank_map"
     )
-    st.write(value)
+
     clicked_id = None
 
     if value:
 
         x = value["x"]
         y = value["y"]
-    
+
         # ===== แถวบน =====
         if 0 <= x <= 70 and 20 <= y <= 90:
             clicked_id = "5Black"
-    
+
         elif 120 <= x <= 210 and 20 <= y <= 90:
             clicked_id = "2Red"
-    
+
         elif 210 <= x <= 280 and 20 <= y <= 90:
             clicked_id = "3Violet"
-    
+
         elif 290 <= x <= 360 and 20 <= y <= 90:
             clicked_id = "8Green"
-    
+
         elif 360 <= x <= 450 and 20 <= y <= 90:
             clicked_id = "17Black"
-    
+
         elif 460 <= x <= 540 and 20 <= y <= 90:
             clicked_id = "15Gold"
-    
+
         elif 540 <= x <= 620 and 20 <= y <= 90:
             clicked_id = "9Orange"
-    
+
         elif 630 <= x <= 700 and 20 <= y <= 90:
             clicked_id = "10LightBlue"
-    
+
         elif 700 <= x <= 770 and 20 <= y <= 90:
             clicked_id = "6BananaLeafGreen"
-    
+
         elif 780 <= x <= 850 and 20 <= y <= 90:
             clicked_id = "16Blue"
-    
+
         elif 860 <= x <= 940 and 20 <= y <= 90:
             clicked_id = "4DarkBlue"
-    
+
         # ===== แถวกลาง =====
         elif 320 <= x <= 420 and 70 <= y <= 140:
             clicked_id = "13DarkTitanium"
-    
+
         elif 640 <= x <= 760 and 70 <= y <= 140:
             clicked_id = "18OrangeOil"
-    
+
         # ===== แถวล่าง =====
         elif 240 <= x <= 360 and 200 <= y <= 260:
             clicked_id = "20Black"
-    
+
         elif 240 <= x <= 360 and 250 <= y <= 320:
             clicked_id = "1DarkRedB"
-    
+
         elif 380 <= x <= 500 and 220 <= y <= 300:
             clicked_id = "7Pink"
-    
+
         elif 520 <= x <= 660 and 350 <= y <= 440:
             clicked_id = "11Gold"
-    
+
         elif 760 <= x <= 900 and 200 <= y <= 270:
             clicked_id = "1DarkRedA"
-    
+
         elif 760 <= x <= 900 and 280 <= y <= 340:
             clicked_id = "19Copper"
-    
+
         elif 760 <= x <= 900 and 350 <= y <= 410:
             clicked_id = "12Titanium"
-    
+
         elif 760 <= x <= 900 and 410 <= y <= 470:
             clicked_id = "14RoseGold"
-    
+
         # ===== Anodize =====
         elif 930 <= x <= 1070 and 600 <= y <= 720:
             clicked_id = "Anodize tank 1"
-    
-        return clicked_id
+
+    return clicked_id
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
 # ================= DASHBOARD (FULL SYSTEM VIEW) =================
