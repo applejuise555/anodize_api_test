@@ -105,7 +105,10 @@ def render_tank_map():
     def t_div(name, top, left, w, h, bg, text_color="white"):
         return f"""
         <div class="tank"
-            onclick="parent.window.location.search='tank={name}'"
+            onclick="window.parent.postMessage({{
+                type: 'tank_click',
+                tank: '{name}'
+        }}, '*')"
             style="
                 left:{left}px;
                 top:{top}px;
