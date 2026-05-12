@@ -146,7 +146,7 @@ def render_tank_map():
     """, unsafe_allow_html=True)
 
     clicked = st_javascript("""
-    async function(){
+    (async () => {
 
         function makeTank(id,text,left,top,width,height,color,extra=""){
             return `
@@ -246,7 +246,7 @@ def render_tank_map():
 
         root.prepend(div)
 
-    }
+    })()
     """)
 
     return clicked
