@@ -472,17 +472,20 @@ if menu == "Dashboard":
             pass
 
 # ================= RECORD PAGE =================
-
-
+# 1. จัดการ Query Params ก่อนเริ่มวาด UI
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     
-    # ดึงค่าจาก URL ว่ามีการคลิกบ่อไหนมา
+    # ดึงค่าจาก URL
     clicked_tank = st.query_params.get("tank")
     
+    # 2. ตรวจสอบว่ามีค่าใน URL และยังไม่ได้เปิด Modal หรือเปล่า 
+    # (ป้องกันการเปิดซ้ำซ้อนจน Error)
     if clicked_tank:
+        # เรียก Modal
         record_modal(clicked_tank)
 
+    # 3. วาดแผนผังด้านล่างเสมอ
     st.info("💡 คลิกที่ชื่อบ่อในแผนผังเพื่อบันทึกข้อมูล")
     render_tank_map()
     st.markdown("---")
