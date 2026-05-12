@@ -489,19 +489,19 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
     
-    # --- ส่วนที่ 1: แผนผังบ่อ (คลิกเพื่อบันทึก) ---
-    st.subheader("เลือกบ่อที่ต้องการบันทึกข้อมูล")
-    clicked_tank = render_tank_map()  # เรียกใช้ฟังก์ชันที่ปรับปรุงใหม่
+    # ส่วนที่ 1: แผนผังบ่อ (Interactive)
+    st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อกรอกข้อมูล")
+    clicked_tank = render_tank_map()
     
+    # ถ้ามีการคลิกบ่อ ให้เปิด Popup ทันที
     if clicked_tank and clicked_tank != 0:
-        # ถ้าบ่อที่คลิกไม่ใช่ RO ให้เปิด Popup บันทึกข้อมูล
-        if clicked_tank != "RO":
+        if clicked_tank != "RO": # ไม่เปิด Popup สำหรับบ่อ RO
             record_modal(clicked_tank)
 
     st.markdown("---")
 
-    # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
-    with tab_main[2]:
+    # ส่วนที่ 2: ระบบงานจิ๊ก (เหลือไว้เป็น Tab เดียว)
+    st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
         sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
 
         with sub_prod:
