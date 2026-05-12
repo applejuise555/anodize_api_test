@@ -12,9 +12,7 @@ from streamlit_javascript import st_javascript
 from streamlit_js_eval import streamlit_js_eval
 import streamlit.components.v1 as components
 import streamlit_javascript as stjs
-import plotly.graph_objects as go
-import streamlit as st
-from streamlit_plotly_events import plotly_events
+
 
 # 1. ตั้งค่า Timezone (UTC +7)
 ICT = timezone(timedelta(hours=7))
@@ -103,44 +101,57 @@ def get_quarter_range(year, quarter):
     return start_date, end_date
 #============================================================================================
 def render_tank_map():
+    def t_div(name, top, left, w, h, bg, extra=""):
+        return f"""
+        <div class="tank {extra}" 
+             onclick="window.parent.postMessage({{type: 'tank_click', name: '{name}'}}, '*')"
+             style="left:{left}px;top:{top}px;width:{w}px;height:{h}px;background:{bg};cursor:pointer;">
+            {name}
+        </div>"""
 
-    tanks = [
-        ("5Black", 10, 10, "red"),
-        ("2Red", 140, 10, "blue"),
-        ("3Violet", 260, 10, "green"),
-    ]
+    html = f"""
+    <style>
+        .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; }}
+        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.2s; }}
+        .tank:hover {{ opacity: 0.7; border: 2.5px solid yellow; transform: scale(1.02); z-index: 100; }}
+        .vertical {{ writing-mode:vertical-rl; text-orientation:mixed; font-size:16px; }}
+        .ro {{ background:#d7ffff !important; color:black !important; }}
+    </style>
+    <div class="plant-map">
+        {t_div("5Black", 10, 10, 70, 70, "#111")}
+        {t_div("2Red", 10, 140, 65, 70, "red")}
+        {t_div("3Violet", 10, 205, 65, 70, "purple")}
+        {t_div("8Green", 10, 290, 65, 70, "green")}
+        {t_div("17Black", 10, 355, 65, 70, "#222")}
+        {t_div("15Gold", 10, 440, 65, 70, "#d4af00")}
+        {t_div("9Orange", 10, 505, 65, 70, "orange")}
+        {t_div("10LightBlue", 10, 600, 65, 70, "cyan", "color:black;")}
+        {t_div("6BananaLeafGreen", 10, 665, 65, 70, "#7fff00", "color:black;")}
+        {t_div("16Blue", 10, 760, 65, 70, "blue")}
+        {t_div("4DarkBlue", 10, 825, 65, 70, "darkblue")}
+        {t_div("20Black", 245, 260, 75, 45, "#111")}
+        {t_div("1DarkRedA", 295, 260, 75, 45, "darkred")}
+        {t_div("7Pink", 245, 360, 80, 160, "magenta", "vertical")}
+        {t_div("HotSealH60", 250, 520, 80, 160, "#666")}
+        {t_div("11Gold", 415, 520, 80, 160, "#cc9900", "vertical")}
+        {t_div("AnodizedPPool1", 660, 860, 130, 230, "#ccc", "vertical; color:black;")}
+    </div>
+    """
+    components.html(html, height=750)
 
-    fig = go.Figure()
+    # รับค่าจาก JS และใช้ Promise เพื่อรอการคลิก
+    clicked_name = st_javascript("""
+        new Promise((resolve) => {
+            window.addEventListener('message', function(event) {
+                if (event.data.type === 'tank_click') {
+                    resolve(event.data.name);
+                }
+            }, { once: true });
+        });
+    """, key="tank_selector") # ต้องมี key เพื่อกันค่าหาย
+    
+    return clicked_name
 
-    for name, x, y, color in tanks:
-        fig.add_trace(go.Scatter(
-            x=[x],
-            y=[y],
-            mode="markers+text",
-            marker=dict(size=60, color=color, symbol="square"),
-            text=[name],
-            textposition="middle center",
-            customdata=[name],
-            name=name
-        ))
-
-    fig.update_layout(
-        height=700,
-        clickmode="event+select",
-        xaxis=dict(visible=False, range=[0, 1000]),
-        yaxis=dict(visible=False, range=[0, 800]),
-        dragmode=False   # 🔥 กัน zoom
-    )
-
-    clicked = plotly_events(
-        fig,
-        click_event=True,
-        select_event=False,
-        override_height=700,
-        key="scada_map"
-    )
-
-    return clicked
 #=================================================================================
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
@@ -468,25 +479,22 @@ if menu == "Dashboard":
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
-    st.info("💡 คลิกที่บ่อในผังด้านล่างเพื่อเปิดฟอร์มกรอกข้อมูล")
-
-    # ===== INIT STATE =====
-    if "selected_tank" not in st.session_state:
-        st.session_state["selected_tank"] = None
-
-    clicked = render_tank_map()
     
-    # 🔥 ดึงค่าคลิก
-    if clicked:
-        try:
-            tank_name = clicked[0]["customdata"][0]
-            st.session_state["selected_tank"] = tank_name
-        except:
-            pass
+    # ดึงค่าจากการคลิกรูปภาพ
+    clicked_tank = render_tank_map()
     
-    # 🔥 เปิดฟอร์ม
-    if st.session_state["selected_tank"]:
-        record_modal(st.session_state["selected_tank"])
+    # ตรวจสอบว่ามีการคลิกจริงไหม (st_javascript จะคืนค่าเป็น 0 หรือ None ถ้าไม่ได้คลิก)
+    if clicked_tank and clicked_tank != 0 and clicked_tank != "RO":
+        # บันทึกค่าลง session_state
+        st.session_state["active_tank"] = str(clicked_tank).strip()
+        
+        # แสดงสถานะการเลือก และเปิดฟอร์ม
+        st.success(f"📍 คุณเลือกบ่อ: {st.session_state['active_tank']}")
+        
+        # เรียกฟังก์ชันฟอร์ม (ย้ายออกมาจากเงื่อนไขซ้อนเพื่อให้ Streamlit ทำงานง่ายขึ้น)
+        record_modal(st.session_state["active_tank"])
+    else:
+        st.info("💡 กรุณาคลิกเลือกบ่อที่ต้องการบันทึกข้อมูลจากผังด้านบน")
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
