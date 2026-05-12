@@ -141,17 +141,21 @@ def render_tank_map():
     """
     components.html(html_code, height=750)
 
-    # ใช้ JavaScript ดักจับค่าแล้วส่งกลับ (สำคัญมากตรง key)
-    # เราใช้ session_state มาทำให้ key เปลี่ยนทุกครั้งหลังบันทึกเสร็จ เพื่อให้คลิกซ้ำได้
-    js_key = st.session_state.get('js_key', 0)
+   js_key = st.session_state.get('js_key', 0)
+    
+    # ปรับ JS ให้ดักฟังตลอดเวลาจนกว่าจะได้รับค่า
     clicked_name = st_javascript("""
-        new Promise((resolve) => {
-            window.addEventListener('message', function(event) {
-                if (event.data.type === 'tank_click') {
-                    resolve(event.data.name);
-                }
-            }, { once: true });
-        });
+        (function() {
+            return new Promise((resolve) => {
+                const handler = (event) => {
+                    if (event.data.type === 'tank_click') {
+                        window.removeEventListener('message', handler);
+                        resolve(event.data.name);
+                    }
+                };
+                window.addEventListener('message', handler);
+            });
+        })()
     """, key=f"tank_clicker_{js_key}")
     
     return clicked_name
@@ -174,8 +178,33 @@ def record_modal(tank_name):
             density = st.number_input("ความหนาแน่น", value=1.000)
             
         if st.form_submit_button("💾 บันทึก"):
-            # ... โค้ดบันทึก Supabase เดิมของคุณ ...
-            
+           all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
+                if tank_name in all_tanks:
+                    supabase.table("color_tank_logs").insert({
+                        "tank_id": all_tanks[tank_name],
+                        "ph_value": ph,
+                        "temperature": temp,
+                        "recorded_at": datetime.now(ICT).isoformat()
+                    }).execute()
+                    st.success("บันทึกบ่อสีสำเร็จ!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error(f"ไม่พบชื่อบ่อ '{tank_name}' ในฐานข้อมูล (เช็คในตาราง tanks)")
+    else:
+        # ฟอร์มบ่ออโนไดซ์ (pH, Temp, Density)
+        with st.form("modal_form_ano", clear_on_submit=True):
+            ph_a = st.number_input("ค่า pH (อโนไดซ์)", step=0.01, format="%.2f", value=1.20)
+            temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
+            den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", value=1.000)
+            if st.form_submit_button("💾 บันทึกอโนไดซ์"):
+                all_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
+                if tank_name in all_tanks:
+                    supabase.table("anodize_tank_logs").insert({
+                        "tank_id": all_tanks[tank_name],
+                        "ph_value": ph_a, "temperature": temp_a, "density": den_a,
+                        "recorded_at": datetime.now(ICT).isoformat()
+                    }).execute()
             # --- ส่วนสำคัญหลังบันทึกสำเร็จ ---
             st.success("บันทึกข้อมูลสำเร็จ!")
             # เปลี่ยน JS Key เพื่อให้เริ่มรับค่าคลิกใหม่ได้แบบสะอาดๆ
@@ -459,25 +488,19 @@ if menu == "Dashboard":
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
+    st.info("💡 คลิกที่ชื่อบ่อในแผนผังด้านล่างเพื่อบันทึกข้อมูล")
     
-    # 1. เตรียม Session State สำหรับเก็บชื่อบ่อที่ถูกคลิก
-    if "selected_tank" not in st.session_state:
-        st.session_state.selected_tank = None
     if "js_key" not in st.session_state:
         st.session_state.js_key = 0
 
-    # 2. เรียกใช้แผนผัง (ส่ง js_key เข้าไปด้วย)
+    # เรียกใช้แผนผัง
     clicked_name = render_tank_map()
 
-    # 3. ตรวจสอบการคลิก (เพิ่มเงื่อนไขเช็คค่าว่าง)
-    if clicked_name and clicked_name != st.session_state.selected_tank:
+    # ตรวจสอบการคลิก
+    # ถ้า st_javascript คืนค่ากลับมา (ไม่เป็น None / 0 / False) ให้เปิด Modal
+    if clicked_name:
+        # เรียก Modal ทันที
         record_modal(clicked_name)
-        # บันทึกลง State เพื่อป้องกันการเรียกซ้ำซ้อน
-        st.session_state.selected_tank = clicked_name
-    
-    # กรณีพิเศษ: ถ้าปิด Modal แล้วต้องการให้คลิกบ่อเดิมซ้ำได้ 
-    # ให้เพิ่มปุ่ม Reset หรือใช้ logic เคลียร์ค่าใน record_modal (ทำไว้ให้แล้วในฟังก์ชันเดิม)
-
     st.markdown("---")
     
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
