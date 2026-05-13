@@ -220,9 +220,6 @@ def render_tank_map():
     if st.button("3Violet", key="tank_3violet"):
         record_modal("3Violet")
     st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-   
 # --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent เรียบร้อย ---
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
