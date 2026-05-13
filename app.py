@@ -2,44 +2,16 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 from datetime import datetime, timezone, timedelta
-from streamlit_autorefresh import st_autorefresh
-import plotly.graph_objects as go
 import math
-from plotly.subplots import make_subplots
 import time
-import streamlit as st
-from streamlit_javascript import st_javascript
-from streamlit_js_eval import streamlit_js_eval
+import streamlit.components.v1 as components
+import streamlit_javascript as stjs
 
-
-
-# 1. ตั้งค่า Timezone (UTC +7)
+# --- 1. การตั้งค่าพื้นฐาน ---
 ICT = timezone(timedelta(hours=7))
-st.set_page_config(page_title="Gissco Production Line and Dashboard", layout="wide")
+st.set_page_config(page_title="Gissco Production Line", layout="wide")
 
-# --- Configuration ---
-COLOR_HEX_MAP = {
-    "Black": "#000000", "Red": "#FF0000", "Dark Red": "#8B0000", 
-    "Violet": "#9400D3", "Green": "#008000", "Banana leaf Green": "#90EE90", 
-    "Gold": "#FFD700", "Orange": "#FFA500", "Light Blue": "#ADD8E6", 
-    "Blue": "#0000FF", "Dark Blue": "#00008B", "Pink": "#FFC0CB", 
-    "Copper": "#B87333", "Titanium": "#808080", "Dark Titanium": "#4A4E69", 
-    "Rose Gold": "#B76E79"
-}
-
-TANK_COLOR_MAP = {
-    "4DarkBlue": "Dark Blue", "16Blue": "Blue", "1DarkRedA": "Dark Red",
-    "1DarkRedB": "Dark Red", "19Copper": "Copper", "12Titanium": "Titanium",
-    "13DarkTitanium": "Dark Titanium", "14RoseGold": "Rose Gold",
-    "6BananaLeafGreen": "Banana leaf Green", "10LightBlue": "Light Blue",
-    "18OrangeOil": "Orange", "9Orange": "Orange", "15Gold": "Gold",
-    "11Gold": "Gold", "17Black": "Black", "21Black": "Black",
-    "5Black": "Black", "20Black": "Black", "7Pink": "Pink",
-    "8Green": "Green", "3Violet": "Violet", "2Red": "Red",
-    "HotSealH60": "Black"
-}
-
-# --- เชื่อมต่อ Supabase ---
+# --- 2. เชื่อมต่อ Supabase ---
 @st.cache_resource
 def init_connection():
     try:
@@ -47,26 +19,12 @@ def init_connection():
         key = st.secrets["SUPABASE_KEY"]
         return create_client(url, key)
     except Exception as e:
-        st.error(f"Error connecting to Supabase: {e}")
+        st.error(f"เชื่อมต่อ Supabase ไม่สำเร็จ: {e}")
         return None
 
 supabase = init_connection()
 
-# --- Helper Functions ---
-def get_hex_from_name(name):
-    sorted_colors = sorted(COLOR_HEX_MAP.keys(), key=len, reverse=True)
-    name_lower = str(name).lower()
-    for color_name in sorted_colors:
-        if color_name.lower() in name_lower:
-            return COLOR_HEX_MAP[color_name]
-    return "#CCCCCC"
-
-def render_color_bar(name):
-    hex_code = get_hex_from_name(name)
-    st.markdown(f"""
-        <div style="background-color:{hex_code}; width:100%; height:20px; border-radius:5px; border: 1px solid #ccc; margin-bottom: 10px;"></div>
-    """, unsafe_allow_html=True)
-
+# --- 3. ฟังก์ชันดึง Options จาก Database ---
 def get_options(table, id_col, name_col, filter_col=None, filter_val=None):
     if not supabase: return {}
     try:
@@ -75,283 +33,145 @@ def get_options(table, id_col, name_col, filter_col=None, filter_val=None):
             query = query.eq(filter_col, filter_val)
         response = query.execute()
         return {item[name_col]: item[id_col] for item in response.data}
-    except Exception:
+    except:
         return {}
 
-def get_status_icon(value, min_val, max_val, warn_margin=0.1):
-    if value is None:
-        return "⚪"
-    if value < min_val or value > max_val:
-        return "🔴"
-    elif value < (min_val + warn_margin) or value > (max_val - warn_margin):
-        return "🟡"
-    return "🟢"
-
-def get_quarter_range(year, quarter):
-    # ไตรมาส 1: ม.ค. - มี.ค., 2: เม.ย. - มิ.ย., ...
-    start_month = (quarter - 1) * 3 + 1
-    end_month = start_month + 2
-    # สร้างวันที่เริ่มต้นและสิ้นสุดของไตรมาส
-    start_date = datetime(year, start_month, 1)
-    if end_month == 12:
-        end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
-    else:
-        end_date = datetime(year, end_month + 1, 1) - timedelta(days=1)
-    return start_date, end_date
-
-
+# --- 4. ฟังก์ชันแผนผังบ่อ (คงระบบเดิม แต่แก้ JS ให้เสถียร) ---
 def render_tank_map():
+    def t_div(name, top, left, w, h, bg, extra=""):
+        # ส่งค่าชื่อบ่อออกไปหา Streamlit เมื่อคลิก
+        return f"""
+        <div class="tank {extra}" 
+             onclick="window.parent.postMessage('{name}', '*')"
+             style="left:{left}px;top:{top}px;width:{w}px;height:{h}px;background:{bg};cursor:pointer;">
+            {name}
+        </div>"""
 
-    html = """
+    html_code = f"""
     <style>
-
-    body{
-        margin:0;
-        padding:0;
-    }
-
-    .plant-map{
-        position:relative;
-        width:1100px;
-        height:720px;
-        background:#e9e9e9;
-        border:2px solid #999;
-        margin:auto;
-        overflow:hidden;
-    }
-
-    .tank{
-        position:absolute;
-        color:white;
-        font-weight:bold;
-        font-size:14px;
-        border-radius:4px;
-        padding:4px;
-        text-align:center;
-        border:1px solid #555;
-        box-sizing:border-box;
-        font-family:Arial;
-    }
-
-    .vertical{
-        writing-mode:vertical-rl;
-        text-orientation:mixed;
-    }
-
-    .ro{
-        background:#d7ffff !important;
-        color:black !important;
-    }
-
+        .plant-map {{ position:relative; width:1100px; height:720px; background:#fff; border:2px solid #ccc; margin:auto; overflow:hidden; font-family: sans-serif; }}
+        .tank {{ position:absolute; color:white; font-weight:bold; font-size:12px; border-radius:2px; display:flex; align-items:center; justify-content:center; text-align:center; border:1px solid #444; box-sizing:border-box; transition: 0.1s; }}
+        .tank:hover {{ opacity: 0.8; border: 2.5px solid yellow !important; transform: scale(1.02); z-index:10; }}
+        .vertical {{ writing-mode:vertical-rl; text-orientation:mixed; font-size:16px; }}
     </style>
-
     <div class="plant-map">
-
-        <!-- TOP ROW -->
-
-        <div class="tank"
-            style="left:0px;top:0px;width:80px;height:80px;background:#111;">
-            5.Black
-        </div>
-
-        <div class="tank"
-            style="left:140px;top:0px;width:70px;height:80px;background:red;">
-            2.Red
-        </div>
-
-        <div class="tank"
-            style="left:210px;top:0px;width:60px;height:80px;background:purple;">
-            3.Violet
-        </div>
-
-        <div class="tank"
-            style="left:295px;top:0px;width:70px;height:80px;background:green;">
-            8.Green
-        </div>
-
-        <div class="tank"
-            style="left:365px;top:0px;width:65px;height:80px;background:#222;">
-            17.Black
-        </div>
-
-        <div class="tank"
-            style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">
-            15.Gold
-        </div>
-
-        <div class="tank"
-            style="left:525px;top:0px;width:65px;height:80px;background:orange;">
-            9.Orange
-        </div>
-
-        <div class="tank"
-            style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">
-            10.Light Blue
-        </div>
-
-        <div class="tank"
-            style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">
-            6.Banana
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:0px;width:70px;height:80px;background:blue;">
-            16.Blue
-        </div>
-
-        <div class="tank"
-            style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">
-            4.Dark Blue
-        </div>
-
-        <!-- RO -->
-
-        <div class="tank ro"
-            style="left:140px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:455px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:785px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <!-- CENTER -->
-
-        <div class="tank vertical"
-            style="left:0px;top:180px;width:60px;height:275px;background:#777;">
-            AlmiteSealerLiquid
-        </div>
-
-        <div class="tank"
-            style="left:270px;top:200px;width:80px;height:50px;background:#111;">
-            20.Black
-        </div>
-
-        <div class="tank"
-            style="left:270px;top:252px;width:80px;height:35px;background:darkred;">
-            1.DarkRed
-        </div>
-
-        <div class="tank vertical"
-            style="left:380px;top:210px;width:85px;height:130px;background:magenta;">
-            7.Pink
-        </div>
-
-        <div class="tank"
-            style="left:540px;top:190px;width:85px;height:130px;background:#777;">
-            HotSeal
-        </div>
-
-        <div class="tank vertical"
-            style="left:540px;top:325px;width:85px;height:120px;background:#d4af00;color:black;">
-            11.Gold
-        </div>
-
-        <!-- RIGHT -->
-
-        <div class="tank"
-            style="left:785px;top:200px;width:65px;height:55px;background:darkred;">
-            1.DarkRed
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:257px;width:65px;height:55px;background:#d9a27f;color:black;">
-            19.Copper
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:314px;width:65px;height:55px;background:#777;">
-            12.Titanium
-        </div>
-
-        <div class="tank"
-            style="left:785px;top:371px;width:65px;height:55px;background:plum;">
-            14.RoseGold
-        </div>
-
-        <!-- ANODIZE -->
-
-        <div class="tank vertical"
-            style="left:890px;top:520px;width:140px;height:190px;background:#ccc;color:black;">
-            AnodizedPPool1
-        </div>
-
-        <!-- DARK TITANIUM -->
-
-        <div class="tank"
-            style="left:310px;top:120px;width:80px;height:40px;background:#666;">
-            13.DarkTitanium
-        </div>
-        
-        <div class="tank"
-            style="left:390px;top:120px;width:80px;height:40px;background:#666;">
-        </div>
-        
-        <!-- ORANGE OIL -->
-        
-        <div class="tank"
-            style="left:625px;top:120px;width:80px;height:40px;background:#dd6600;">
-            18.OrangeOil
-        </div>
-        
-        <div class="tank"
-            style="left:705px;top:120px;width:80px;height:40px;background:#dd6600;">
-        </div>
-        
-        <!-- RO CENTER -->
-        
-        <div class="tank ro"
-            style="left:380px;top:355px;width:85px;height:90px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:625px;top:190px;width:90px;height:125px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:625px;top:320px;width:90px;height:125px;">
-            RO
-        </div>
-        
-        <!-- RO RIGHT -->
-        
-        <div class="tank ro"
-            style="left:850px;top:200px;width:85px;height:110px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:850px;top:312px;width:85px;height:114px;">
-            RO
-        </div>
-        
-        <div class="tank ro"
-            style="left:990px;top:215px;width:85px;height:80px;">
-            RO
-        </div>
-
+        {t_div("5Black", 10, 10, 70, 70, "#111")}
+        {t_div("2Red", 10, 140, 65, 70, "red")}
+        {t_div("3Violet", 10, 205, 65, 70, "purple")}
+        {t_div("8Green", 10, 290, 65, 70, "green")}
+        {t_div("17Black", 10, 355, 65, 70, "#222")}
+        {t_div("15Gold", 10, 440, 65, 70, "#d4af00")}
+        {t_div("9Orange", 10, 505, 65, 70, "orange")}
+        {t_div("10LightBlue", 10, 600, 65, 70, "cyan", "color:black;")}
+        {t_div("6BananaLeafGreen", 10, 665, 65, 70, "#7fff00", "color:black;")}
+        {t_div("16Blue", 10, 760, 65, 70, "blue")}
+        {t_div("4DarkBlue", 10, 825, 65, 70, "darkblue")}
+        {t_div("20Black", 245, 260, 75, 45, "#111")}
+        {t_div("1DarkRedA", 295, 260, 75, 45, "darkred")}
+        {t_div("7Pink", 245, 360, 80, 160, "magenta", "vertical")}
+        {t_div("HotSealH60", 250, 520, 80, 160, "#666")}
+        {t_div("11Gold", 415, 520, 80, 160, "#cc9900", "vertical")}
+        {t_div("AnodizedPPool1", 660, 860, 130, 230, "#555", "vertical")}
     </div>
     """
+    components.html(html_code, height=750)
 
-    st.html(f"""
-    <div style="height:750px; overflow:hidden;">
-        {html}
-    </div>
+# --- 5. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent และ Logic ปิดหน้าต่าง ---
+@st.dialog("บันทึกข้อมูลบ่อ")
+def record_modal(tank_name):
+    st.write(f"### 📍 กำลังบันทึกบ่อ: **{tank_name}**")
+    is_anodize = "Anodized" in tank_name or "PPool" in tank_name or "17Black" in tank_name
+    
+    with st.form("modal_record_form", clear_on_submit=True):
+        if not is_anodize:
+            # --- ฟอร์มบ่อสี ---
+            ph = st.number_input("ค่า pH (Color)", step=0.01, format="%.2f", value=5.50)
+            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=30.0)
+            submit = st.form_submit_button("💾 บันทึกข้อมูลบ่อสี")
+            
+            if submit:
+                try:
+                    all_tanks = get_options("tanks", "tank_id", "tank_name")
+                    if tank_name in all_tanks:
+                        supabase.table("color_tank_logs").insert({
+                            "tank_id": all_tanks[tank_name],
+                            "ph_value": ph,
+                            "temperature": temp,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                        st.success("บันทึกบ่อสีสำเร็จ!")
+                        st.session_state.selected_tank = None # ล้างค่าเพื่อปิด Modal
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("ไม่พบ ID บ่อนี้ในฐานข้อมูล")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+        else:
+            # --- ฟอร์มบ่ออโนไดซ์ ---
+            ph_a = st.number_input("ค่า pH (Anodize)", step=0.01, format="%.2f", value=1.20)
+            temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", value=20.0)
+            den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", value=1.000)
+            submit_ano = st.form_submit_button("💾 บันทึกข้อมูลอโนไดซ์")
+            
+            if submit_ano:
+                try:
+                    all_tanks = get_options("tanks", "tank_id", "tank_name")
+                    if tank_name in all_tanks:
+                        supabase.table("anodize_tank_logs").insert({
+                            "tank_id": all_tanks[tank_name],
+                            "ph_value": ph_a,
+                            "temperature": temp_a,
+                            "density": den_a,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                        st.success("บันทึกอโนไดซ์สำเร็จ!")
+                        st.session_state.selected_tank = None # ล้างค่าเพื่อปิด Modal
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("ไม่พบ ID บ่อนี้ในฐานข้อมูล")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # ปุ่มปิดหน้าต่าง (อยู่นอก st.form)
+    if st.button("❌ ยกเลิก / ปิดหน้าต่าง"):
+        st.session_state.selected_tank = None
+        st.rerun()
+
+# --- 6. เมนูและการแสดงผลหลัก ---
+menu = st.sidebar.radio("เมนูหลัก", ["Dashboard", "บันทึกข้อมูลการผลิต"])
+
+if menu == "บันทึกข้อมูลการผลิต":
+    st.title("📝 ระบบบันทึกข้อมูลการผลิต")
+
+    # 1. ใช้ JS ดักฟังการคลิกบ่อ (รอรับ Message จาก Iframe)
+    clicked_val = stjs.st_javascript("""
+        await new Promise(resolve => {
+            const handler = (event) => {
+                if (typeof event.data === 'string') {
+                    window.removeEventListener('message', handler);
+                    resolve(event.data);
+                }
+            };
+            window.addEventListener('message', handler);
+        });
     """)
-#=================================================================   
-menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
 
-# ================= DASHBOARD (FULL SYSTEM VIEW) =================
-if menu == "Dashboard":
-    st.title("📊 Production Dashboard (System Overview)")
+    # 2. เก็บค่าลง Session State ทันทีที่คลิก (กันฟอร์มหายตอน Rerun)
+    if clicked_val and clicked_val != 0:
+        st.session_state.selected_tank = clicked_val
+
+    # 3. ถ้ามีการเลือกบ่อ ให้เปิด Modal ค้างไว้
+    if st.session_state.get("selected_tank"):
+        record_modal(st.session_state.selected_tank)
+
+    st.info("💡 คลิกที่ **ชื่อบ่อ** ในแผนผังด้านล่างเพื่อเริ่มบันทึกข้อมูล")
+    render_tank_map()
+
+elif menu == "Dashboard":
+    st.title("📊 ระบบติดตามการผลิต")
+    st.write("ยินดีต้อนรับสู่ระบบบริหารจัดการสายการผลิตอโนไดซ์")
 
     # ================= STANDARD =================
     PH_MIN, PH_MAX = 5.0, 6.0
