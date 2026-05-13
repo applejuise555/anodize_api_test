@@ -99,10 +99,8 @@ def get_quarter_range(year, quarter):
         end_date = datetime(year, end_month + 1, 1) - timedelta(days=1)
     return start_date, end_date
 
-import streamlit.components.v1 as components
-
 def render_tank_map():
-    # ดึงค่า URL ปัจจุบันเพื่อสร้าง Link ภายในแอป
+    # สร้าง HTML ที่แต่ละบ่อสามารถคลิกได้ โดยส่งค่าผ่าน URL Query Parameters (?selected_tank=...)
     html = """
     <style>
         body { margin:0; padding:0; }
@@ -111,107 +109,52 @@ def render_tank_map():
             background:#e9e9e9; border:2px solid #999;
             margin:auto; overflow:hidden;
         }
-        /* ปรับปรุง CSS ของบ่อให้มีลักษณะเป็นปุ่มที่คลิกได้ */
         .tank {
-            position:absolute; color:white; font-weight:bold;
-            font-size:14px; border-radius:4px; padding:4px;
-            text-align:center; border:1px solid #555;
-            box-sizing:border-box; font-family:Arial;
-            cursor: pointer;
-            transition: transform 0.1s, brightness 0.1s;
+            position:absolute; color:white; font-weight:bold; font-size:14px;
+            border-radius:4px; padding:4px; text-align:center;
+            border:1px solid #555; box-sizing:border-box; font-family:Arial;
+            cursor: pointer; transition: 0.2s; text-decoration: none;
             display: flex; align-items: center; justify-content: center;
-            text-decoration: none; /* ลบเส้นใต้ link */
         }
-        .tank:hover {
-            filter: brightness(1.2);
-            transform: scale(1.02);
-            border: 2px solid #fff;
-            z-index: 10;
-        }
-        .tank:active { transform: scale(0.98); }
+        .tank:hover { transform: scale(1.05); filter: brightness(1.2); border: 2px solid white; z-index:10; }
         .vertical { writing-mode:vertical-rl; text-orientation:mixed; }
-        .ro { background:#d7ffff !important; color:black !important; }
+        .ro { background:#d7ffff !important; color:black !important; cursor: default; }
+        .ro:hover { transform: none; filter: none; border: 1px solid #555; }
     </style>
 
     <div class="plant-map">
-        <a href="?selected_tank=5.Black" target="_self">
-            <div class="tank" style="left:0px;top:0px;width:80px;height:80px;background:#111;">5.Black</div>
-        </a>
+        <a href="?selected_tank=5.Black" target="_self"><div class="tank" style="left:0px;top:0px;width:80px;height:80px;background:#111;">5.Black</div></a>
+        <a href="?selected_tank=2.Red" target="_self"><div class="tank" style="left:140px;top:0px;width:70px;height:80px;background:red;">2.Red</div></a>
+        <a href="?selected_tank=3.Violet" target="_self"><div class="tank" style="left:210px;top:0px;width:60px;height:80px;background:purple;">3.Violet</div></a>
+        <a href="?selected_tank=8.Green" target="_self"><div class="tank" style="left:295px;top:0px;width:70px;height:80px;background:green;">8.Green</div></a>
+        <a href="?selected_tank=17.Black" target="_self"><div class="tank" style="left:365px;top:0px;width:65px;height:80px;background:#222;">17.Black</div></a>
+        <a href="?selected_tank=15.Gold" target="_self"><div class="tank" style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">15.Gold</div></a>
+        <a href="?selected_tank=9.Orange" target="_self"><div class="tank" style="left:525px;top:0px;width:65px;height:80px;background:orange;">9.Orange</div></a>
+        <a href="?selected_tank=10.Light Blue" target="_self"><div class="tank" style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">10.LB</div></a>
+        <a href="?selected_tank=6.BananaLeafGreen" target="_self"><div class="tank" style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">6.Banana</div></a>
+        <a href="?selected_tank=16.Blue" target="_self"><div class="tank" style="left:785px;top:0px;width:70px;height:80px;background:blue;">16.Blue</div></a>
+        <a href="?selected_tank=4.DarkBlue" target="_self"><div class="tank" style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">4.Dark Blue</div></a>
 
-        <a href="?selected_tank=2.Red" target="_self">
-            <div class="tank" style="left:140px;top:0px;width:70px;height:80px;background:red;">2.Red</div>
-        </a>
+        <div class="tank ro" style="left:140px;top:82px;width:130px;height:65px;">RO</div>
+        <div class="tank ro" style="left:455px;top:82px;width:130px;height:65px;">RO</div>
+        <div class="tank ro" style="left:785px;top:82px;width:130px;height:65px;">RO</div>
 
-        <a href="?selected_tank=3.Violet" target="_self">
-            <div class="tank" style="left:210px;top:0px;width:60px;height:80px;background:purple;">3.Violet</div>
-        </a>
+        <a href="?selected_tank=20.Black" target="_self"><div class="tank" style="left:270px;top:200px;width:80px;height:50px;background:#111;">20.Black</div></a>
+        <a href="?selected_tank=1DarkRedA" target="_self"><div class="tank" style="left:270px;top:252px;width:80px;height:35px;background:darkred;">1.DarkRed</div></a>
+        <a href="?selected_tank=7.Pink" target="_self"><div class="tank vertical" style="left:380px;top:210px;width:85px;height:130px;background:magenta;">7.Pink</div></a>
+        <a href="?selected_tank=11.Gold" target="_self"><div class="tank vertical" style="left:540px;top:325px;width:85px;height:120px;background:#d4af00;color:black;">11.Gold</div></a>
 
-        <a href="?selected_tank=8.Green" target="_self">
-            <div class="tank" style="left:295px;top:0px;width:70px;height:80px;background:green;">8.Green</div>
-        </a>
-
-        <a href="?selected_tank=17.Black" target="_self">
-            <div class="tank" style="left:365px;top:0px;width:65px;height:80px;background:#222;">17.Black</div>
-        </a>
-
-        <a href="?selected_tank=15.Gold" target="_self">
-            <div class="tank" style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">15.Gold</div>
-        </a>
-
-        <a href="?selected_tank=9.Orange" target="_self">
-            <div class="tank" style="left:525px;top:0px;width:65px;height:80px;background:orange;">9.Orange</div>
-        </a>
-
-        <a href="?selected_tank=10.Light Blue" target="_self">
-            <div class="tank" style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">10.Light Blue</div>
-        </a>
-
-        <a href="?selected_tank=6.BananaLeafGreen" target="_self">
-            <div class="tank" style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">6.Banana</div>
-        </a>
-
-        <a href="?selected_tank=16.Blue" target="_self">
-            <div class="tank" style="left:785px;top:0px;width:70px;height:80px;background:blue;">16.Blue</div>
-        </a>
-
-        <a href="?selected_tank=4.DarkBlue" target="_self">
-            <div class="tank" style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">4.Dark Blue</div>
-        </a>
-
-        <a href="?selected_tank=20.Black" target="_self">
-            <div class="tank" style="left:270px;top:200px;width:80px;height:50px;background:#111;">20.Black</div>
-        </a>
-
-        <a href="?selected_tank=1DarkRedA" target="_self">
-            <div class="tank" style="left:270px;top:252px;width:80px;height:35px;background:darkred;">1.DarkRed</div>
-        </a>
-        
-        <a href="?selected_tank=7.Pink" target="_self">
-            <div class="tank vertical" style="left:380px;top:210px;width:85px;height:130px;background:magenta;">7.Pink</div>
-        </a>
-
-        <a href="?selected_tank=11.Gold" target="_self">
-            <div class="tank vertical" style="left:540px;top:325px;width:85px;height:120px;background:#d4af00;color:black;">11.Gold</div>
-        </a>
-
-        <a href="?selected_tank=19.Copper" target="_self">
-            <div class="tank" style="left:785px;top:257px;width:65px;height:55px;background:#B87333;color:black;">19.Copper</div>
-        </a>
+        <a href="?selected_tank=19.Copper" target="_self"><div class="tank" style="left:785px;top:257px;width:65px;height:55px;background:#d9a27f;color:black;">19.Copper</div></a>
+        <a href="?selected_tank=12.Titanium" target="_self"><div class="tank" style="left:785px;top:314px;width:65px;height:55px;background:#777;">12.Ti</div></a>
+        <a href="?selected_tank=14.RoseGold" target="_self"><div class="tank" style="left:785px;top:371px;width:65px;height:55px;background:plum;">14.RG</div></a>
 
         <a href="?selected_tank=AnodizedPPool1" target="_self">
             <div class="tank vertical" style="left:890px;top:520px;width:140px;height:190px;background:#ccc;color:black;">
                 AnodizedPPool1
             </div>
         </a>
-
-        <div class="tank ro" style="left:140px;top:82px;width:130px;height:65px;">RO</div>
-        <div class="tank ro" style="left:455px;top:82px;width:130px;height:65px;">RO</div>
-        <div class="tank ro" style="left:785px;top:82px;width:130px;height:65px;">RO</div>
-
     </div>
     """
-    components.html
-
     components.html(html, height=750, scrolling=False)
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต"])
@@ -489,49 +432,107 @@ if menu == "Dashboard":
 
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
-    st.title("📝 ระบบบันทึกข้อมูล")
+    st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
     
-    # 1. รับค่าจาก URL
-    q_params = st.query_params
-    clicked_tank = q_params.get("selected_tank", None)
+    # 1. รับค่าจาก URL (Query Parameters)
+    query_params = st.query_params
+    clicked_tank = query_params.get("selected_tank", None)
     
-    # 2. แสดงแผนผัง (เรียกแค่ครั้งเดียว)
+    # 2. แสดงแผนผัง
     render_tank_map()
-    
-    # 3. สร้าง Tab
-    tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่ออโนไดซ์ (Anodize)"])
 
+    # 3. ตรวจสอบว่าบ่อที่คลิกมาคือประเภทไหน เพื่อเลือก Tab เริ่มต้น
+    # ถ้าคำว่า Anodized อยู่ในชื่อบ่อ ให้เปิด Tab อโนไดซ์ (index 1)
+    default_tab_index = 0
+    if clicked_tank and "Anodized" in clicked_tank:
+        default_tab_index = 1
+    
+    # สร้าง Tab โดยมีการระบุค่า default index
+    tab_main = st.tabs(["🎨 บ่อสี (Color Bath)", "⚡ บ่ออโนไดซ์ (Anodize)", "📦 งานจิ๊ก (Jig System)"])
+
+    # --- Tab 1: บ่อสี ---
     with tab_main[0]:
         color_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
         tank_list = list(color_tanks.keys())
         
-        # ค้นหา index
-        default_idx = 0
-        if clicked_tank in tank_list:
-            default_idx = tank_list.index(clicked_tank)
-            
-        # ตรวจสอบว่า KEY "color_select_main" ต้องไม่มีที่อื่นในหน้านี้
-        st.selectbox(
-            "ยืนยันบ่อสี", 
-            tank_list, 
-            index=default_idx, 
-            key="color_select_unique_1"  # เปลี่ยนชื่อ key ให้เจาะจง
-        )
+        # ค้นหา index ของบ่อที่คลิกมาจาก Map
+        try:
+            start_idx = tank_list.index(clicked_tank) if clicked_tank in tank_list else 0
+        except:
+            start_idx = 0
 
+        # ใช้ key ที่ระบุเฉพาะเจาะจงเพื่อแก้ Duplicate Key Error
+        selected_tank_name = st.selectbox(
+            "ยืนยันบ่อสี",
+            tank_list,
+            index=start_idx,
+            key="selectbox_color_entry_unique"
+        )
+    
+        detected_color = TANK_COLOR_MAP.get(selected_tank_name, "Black")
+        render_color_bar(detected_color)
+    
+        with st.form("color_log_form_new", clear_on_submit=True):
+            ph = st.number_input("ค่า pH", step=0.1, format="%.2f", key="ph_color_input")
+            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", key="temp_color_input")
+    
+            if st.form_submit_button("💾 บันทึกค่าบ่อสี"):
+                try:
+                    supabase.table("color_tank_logs").insert({
+                        "tank_id": color_tanks[selected_tank_name],
+                        "ph_value": ph,
+                        "temperature": temp,
+                        "recorded_at": datetime.now(ICT).isoformat()
+                    }).execute()
+                    st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
+                    st.query_params.clear() # ล้างค่าใน URL หลังบันทึก
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # --- Tab 2: บ่ออโนไดซ์ ---
     with tab_main[1]:
         ano_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
-        ano_list = list(ano_tanks.keys())
         
-        default_idx_ano = 0
-        if clicked_tank in ano_list:
-            default_idx_ano = ano_list.index(clicked_tank)
+        if ano_tanks:
+            ano_list = list(ano_tanks.keys())
             
-        st.selectbox(
-            "ยืนยันบ่ออโนไดซ์", 
-            ano_list, 
-            index=default_idx_ano, 
-            key="ano_select_unique_1"  # เปลี่ยนชื่อ key ให้เจาะจงไม่ให้ซ้ำกับด้านบน
-        )
+            # ค้นหา index สำหรับบ่ออโนไดซ์
+            try:
+                start_idx_ano = ano_list.index(clicked_tank) if clicked_tank in ano_list else 0
+            except:
+                start_idx_ano = 0
+
+            sel_ano = st.selectbox(
+                "ยืนยันบ่ออโนไดซ์",
+                ano_list,
+                index=start_idx_ano,
+                key="selectbox_ano_entry_unique"
+            )
+            
+            with st.form("ano_form_new", clear_on_submit=True):
+                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f", key="ph_ano_input")
+                temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", key="temp_ano_input")
+                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", key="den_ano_input")
+                
+                if st.form_submit_button("💾 บันทึกข้อมูลอโนไดซ์"):
+                    try:
+                        supabase.table("anodize_tank_logs").insert({
+                            "tank_id": ano_tanks[sel_ano], 
+                            "ph_value": ph_a,
+                            "temperature": temp_a, 
+                            "density": den_a,
+                            "recorded_at": datetime.now(ICT).isoformat()
+                        }).execute()
+                        st.success("✅ บันทึกข้อมูลอโนไดซ์สำเร็จ")
+                        st.query_params.clear() # ล้างค่าใน URL หลังบันทึก
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาด: {e}")
+        else:
+            st.warning("ไม่พบข้อมูลบ่ออโนไดซ์ในระบบ")
 
     # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
     with tab_main[2]:
