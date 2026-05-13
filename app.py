@@ -105,7 +105,7 @@ def render_tank_map():
     def t_div(name, top, left, w, h, bg, text_color="white"):
         return f"""
         <div class="tank"
-            onclick="sendTank('{name}')"
+            onclick="selectTank('{name}')"
             style="
                 left:{left}px;
                 top:{top}px;
@@ -156,10 +156,10 @@ def render_tank_map():
     </style>
 
     <script>
-    function sendTank(name) {{
-        const url = new URL(window.parent.location);
-        url.searchParams.set("tank", name);
-        window.parent.location.href = url.toString();
+    function selectTank(name) {{
+        const currentUrl = new URL(window.parent.location.href);
+        currentUrl.searchParams.set("tank", name);
+        window.parent.location.href = currentUrl.toString();
     }}
     </script>
 
@@ -196,7 +196,7 @@ def render_tank_map():
     </div>
     """
 
-    components.html(html_code, height=750)
+    components.html(html_code, height=750, scrolling=False)
 # --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent เรียบร้อย ---
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
