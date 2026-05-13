@@ -126,7 +126,7 @@ def render_tank_map():
 
     tank_html = """
     <style>
-
+    
     .plant-map{
         position:relative;
         width:1100px;
@@ -135,7 +135,7 @@ def render_tank_map():
         border:2px solid #999;
         margin:auto;
     }
-
+    
     .tank{
         position:absolute;
         border:2px solid #333;
@@ -152,205 +152,132 @@ def render_tank_map():
         transition:0.15s;
         font-family:sans-serif;
     }
-
+    
     .tank:hover{
         transform:scale(1.05);
         border:3px solid yellow;
         z-index:999;
     }
-
+    
     .blacktxt{
         color:black;
     }
-
+    
     </style>
-
+    
+    <script>
+    function selectTank(name){
+        const url = new URL(window.parent.location.href);
+        url.searchParams.set("tank", name);
+        window.parent.location.href = url.toString();
+    }
+    </script>
+    
     <div class="plant-map">
-
-    <div class="tank" style="
+    
+    <div class="tank"
+        onclick="selectTank('5Black')"
+        style="
         left:10px; top:10px;
         width:70px; height:70px;
         background:#111;">
         5Black
     </div>
-
-    <div class="tank" style="
+    
+    <div class="tank"
+        onclick="selectTank('2Red')"
+        style="
         left:145px; top:10px;
         width:65px; height:70px;
         background:red;">
         2Red
     </div>
-
-    <div class="tank" style="
+    
+    <div class="tank"
+        onclick="selectTank('3Violet')"
+        style="
         left:210px; top:10px;
         width:65px; height:70px;
         background:purple;">
         3Violet
     </div>
-
-    <div class="tank" style="
+    
+    <div class="tank"
+        onclick="selectTank('8Green')"
+        style="
         left:300px; top:10px;
         width:70px; height:70px;
         background:green;">
         8Green
     </div>
-
-    <div class="tank" style="
+    
+    <div class="tank"
+        onclick="selectTank('17Black')"
+        style="
         left:380px; top:10px;
         width:80px; height:70px;
         background:#222;">
         17Black
     </div>
-
-    <div class="tank blacktxt" style="
+    
+    <div class="tank blacktxt"
+        onclick="selectTank('15Gold')"
+        style="
         left:485px; top:10px;
         width:70px; height:70px;
         background:#D4AF37;">
         15Gold
     </div>
-
-    <div class="tank blacktxt" style="
+    
+    <div class="tank blacktxt"
+        onclick="selectTank('9Orange')"
+        style="
         left:545px; top:10px;
         width:70px; height:70px;
         background:orange;">
         9Orange
     </div>
-
-    <div class="tank blacktxt" style="
+    
+    <div class="tank blacktxt"
+        onclick="selectTank('10LightBlue')"
+        style="
         left:650px; top:10px;
         width:70px; height:70px;
         background:#87CEFA;">
         10LightBlue
     </div>
-
-    <div class="tank blacktxt" style="
+    
+    <div class="tank blacktxt"
+        onclick="selectTank('6BananaLeafGreen')"
+        style="
         left:715px; top:10px;
         width:70px; height:70px;
         background:#9ACD32;">
         6BananaLeafGreen
     </div>
-
-    <div class="tank" style="
+    
+    <div class="tank"
+        onclick="selectTank('16Blue')"
+        style="
         left:795px; top:10px;
         width:70px; height:70px;
         background:blue;">
         16Blue
     </div>
-
-    <div class="tank" style="
+    
+    <div class="tank"
+        onclick="selectTank('4DarkBlue')"
+        style="
         left:870px; top:10px;
         width:70px; height:70px;
         background:#00008B;">
         4DarkBlue
     </div>
-
-    <div class="tank" style="
-        left:340px; top:85px;
-        width:120px; height:40px;
-        background:#4A4E69;">
-        13DarkTitanium
-    </div>
-
-    <div class="tank blacktxt" style="
-        left:655px; top:90px;
-        width:120px; height:40px;
-        background:#FF8C00;">
-        18OrangeOil
-    </div>
-
-    <div class="tank" style="
-        left:270px; top:220px;
-        width:120px; height:45px;
-        background:#111;">
-        20Black
-    </div>
-
-    <div class="tank" style="
-        left:250px; top:265px;
-        width:150px; height:45px;
-        background:#8B0000;">
-        1DarkRedB
-    </div>
-
-    <div class="tank blacktxt" style="
-        left:420px; top:240px;
-        width:120px; height:80px;
-        background:pink;">
-        7Pink
-    </div>
-
-    <div class="tank blacktxt" style="
-        left:540px; top:390px;
-        width:90px; height:170px;
-        background:#D4AF37;">
-        11Gold
-    </div>
-
-    <div class="tank" style="
-        left:790px; top:220px;
-        width:150px; height:45px;
-        background:#8B0000;">
-        1DarkRedA
-    </div>
-
-    <div class="tank blacktxt" style="
-        left:790px; top:300px;
-        width:150px; height:55px;
-        background:#B87333;">
-        19Copper
-    </div>
-
-    <div class="tank blacktxt" style="
-        left:790px; top:370px;
-        width:150px; height:45px;
-        background:#808080;">
-        12Titanium
-    </div>
-
-    <div class="tank blacktxt" style="
-        left:790px; top:420px;
-        width:150px; height:45px;
-        background:#B76E79;">
-        14RoseGold
-    </div>
-
-    <div class="tank blacktxt" style="
-        left:930px; top:630px;
-        width:150px; height:60px;
-        background:#00BFFF;">
-        Anodize tank 1
-    </div>
-
+    
     </div>
     """
-
     st.markdown(tank_html, unsafe_allow_html=True)
-    st.markdown("### เลือกบ่อ")
-
-    tank_list = [
-        "5Black",
-        "2Red",
-        "3Violet",
-        "8Green",
-        "17Black",
-        "15Gold",
-        "9Orange",
-        "10LightBlue",
-        "6BananaLeafGreen",
-        "16Blue",
-        "4DarkBlue",
-    ]
-
-    cols = st.columns(6)
-
-    for i, tank in enumerate(tank_list):
-
-        with cols[i % 6]:
-
-            if st.button(tank, key=tank):
-
-                st.session_state.selected_tank = tank
-                st.rerun()
+   
 # --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent เรียบร้อย ---
 @st.dialog("บันทึกข้อมูลบ่อ")
 def record_modal(tank_name):
