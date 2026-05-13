@@ -431,29 +431,25 @@ if menu == "Dashboard":
             pass
 
 # ================= RECORD PAGE =================
-# ================= RECORD PAGE =================
-# ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
     
-    # 1. ดึงค่าจาก URL
+    # 1. รับค่าจาก URL (Query Parameters) เมื่อมีการคลิกจากแผนผัง
     query_params = st.query_params
     clicked_tank = query_params.get("selected_tank", None)
     
-    # 2. แสดงผังบ่อ (ต้องใช้ฟังก์ชัน render_tank_map ที่มี <a> tag ตามที่แนะนำก่อนหน้า)
+    # 2. แสดงแผนผังบ่อ (ฟังก์ชัน render_tank_map ที่ส่งค่าผ่าน URL)
     render_tank_map()
-    
-    # 3. สร้าง Tab ให้ครบ 3 Tabs (ป้องกัน IndexError)
-    # หมายเหตุ: Streamlit Tabs ปกติจะไม่อนุญาตให้เปลี่ยนหน้าผ่านโค้ดได้โดยตรง 
-    # แต่เราจะใช้ Logic ในการ Set Default Value ใน Selectbox แทน
+
+    # 3. สร้าง Tab หลัก 3 รายการ (ป้องกัน IndexError)
     tab_main = st.tabs(["🎨 บ่อสี (Color Bath)", "⚡ บ่ออโนไดซ์ (Anodize)", "📦 งานจิ๊ก (Jig System)"])
 
-    # --- Tab 1: บ่อสี ---
+    # --- Tab 1: บ่อสี (Index 0) ---
     with tab_main[0]:
         color_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Color")
         tank_list = list(color_tanks.keys())
         
-        # หา Index ของบ่อที่คลิกมา
+        # ค้นหาตำแหน่งบ่อที่คลิกมา
         start_idx = 0
         if clicked_tank in tank_list:
             start_idx = tank_list.index(clicked_tank)
@@ -462,17 +458,17 @@ if menu == "บันทึกข้อมูลการผลิต":
             "ยืนยันบ่อสี",
             tank_list,
             index=start_idx,
-            key="selectbox_color_entry_unique" # เปลี่ยน Key ไม่ให้ซ้ำ
+            key="selectbox_color_entry_unique"
         )
     
         detected_color = TANK_COLOR_MAP.get(selected_tank_name, "Black")
         render_color_bar(detected_color)
     
-        with st.form("color_log_form_new", clear_on_submit=True):
-            ph = st.number_input("ค่า pH", step=0.1, format="%.2f", key="ph_color_input")
-            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", key="temp_color_input")
+        with st.form("color_log_form_fixed", clear_on_submit=True):
+            ph = st.number_input("ค่า pH", step=0.1, format="%.2f", key="ph_color_val")
+            temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", key="temp_color_val")
     
-            if st.form_submit_button("💾 บันทึกค่าบ่อสี"):
+            if st.form_submit_button("บันทึกค่า"):
                 try:
                     supabase.table("color_tank_logs").insert({
                         "tank_id": color_tanks[selected_tank_name],
@@ -481,19 +477,19 @@ if menu == "บันทึกข้อมูลการผลิต":
                         "recorded_at": datetime.now(ICT).isoformat()
                     }).execute()
                     st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
-                    st.query_params.clear() 
+                    st.query_params.clear() # เคลียร์ URL หลังบันทึกสำเร็จ
                     time.sleep(1)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # --- Tab 2: บ่ออโนไดซ์ ---
+    # --- Tab 2: บ่ออโนไดซ์ (Index 1) ---
     with tab_main[1]:
         ano_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
         if ano_tanks:
             ano_list = list(ano_tanks.keys())
             
-            # ตรวจสอบบ่อที่คลิกมา (เช่น AnodizedPPool1)
+            # ค้นหาตำแหน่งบ่ออโนไดซ์ที่คลิกมา (เช่น AnodizedPPool1)
             start_idx_ano = 0
             if clicked_tank in ano_list:
                 start_idx_ano = ano_list.index(clicked_tank)
@@ -502,15 +498,15 @@ if menu == "บันทึกข้อมูลการผลิต":
                 "ยืนยันบ่ออโนไดซ์",
                 ano_list,
                 index=start_idx_ano,
-                key="selectbox_ano_entry_unique" # เปลี่ยน Key ไม่ให้ซ้ำ
+                key="selectbox_ano_entry_unique"
             )
             
-            with st.form("ano_form_new", clear_on_submit=True):
-                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f", key="ph_ano_input")
-                temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", key="temp_ano_input")
-                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", key="den_ano_input")
+            with st.form("ano_form_fixed", clear_on_submit=True):
+                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f", key="ph_ano_val")
+                temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", key="temp_ano_val")
+                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", key="den_ano_val")
                 
-                if st.form_submit_button("💾 บันทึกข้อมูลอโนไดซ์"):
+                if st.form_submit_button("บันทึกข้อมูลอโนไดซ์"):
                     try:
                         supabase.table("anodize_tank_logs").insert({
                             "tank_id": ano_tanks[sel_ano], 
@@ -525,20 +521,18 @@ if menu == "บันทึกข้อมูลการผลิต":
                         st.rerun()
                     except Exception as e:
                         st.error(f"เกิดข้อผิดพลาด: {e}")
-        else:
-            st.info("💡 กรุณาเลือกบ่ออโนไดซ์จากผังหรือเลือกในรายการ")
 
-    # --- Tab 3: ระบบงานจิ๊ก (ที่เคย Error บรรทัดนี้จะหายไป) ---
+    # --- Tab 3: ระบบงานจิ๊ก (Index 2) ---
     with tab_main[2]:
         st.subheader("📦 ระบบจัดการงานจิ๊ก")
-        sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
-        
-        # ใส่โค้ดเดิมของคุณในแต่ละ sub_tab ต่อได้เลยครับ...
-        
-        with sub_prod:
+        # สร้าง Sub-tabs ภายใน (เปลี่ยนชื่อตัวแปรเพื่อไม่ให้ซ้ำกับ tab_main)
+        sub_tabs_jig = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
+
+        # --- 3.1 ลงทะเบียนสินค้า ---
+        with sub_tabs_jig[0]:
             st.subheader("เพิ่มสินค้าใหม่ลงระบบ")
-            shape = st.selectbox("📐 เลือกรูปทรง", ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง"], key="shape_sel")
-            with st.form("add_prod_form_fixed", clear_on_submit=True):
+            shape = st.selectbox("📐 เลือกรูปทรง", ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง"], key="shape_sel_new")
+            with st.form("add_prod_form_new", clear_on_submit=True):
                 c1, c2 = st.columns(2)
                 p_code = c1.text_input("รหัสสินค้า *")
                 p_name = c1.text_input("ชื่อสินค้า")
@@ -572,67 +566,28 @@ if menu == "บันทึกข้อมูลการผลิต":
                             }
                             supabase.table("products").insert(payload).execute()
                             st.success(f"✅ ลงทะเบียนรหัส {p_code} สำเร็จ!")
-                    else: 
-                        st.error("กรุณาระบุรหัสสินค้า")
-
-        with sub_jig:
-            st.subheader("📦 ลงทะเบียนจิ๊กชุดใหม่ (Bulk Registration)")
-    
-            # 1. ส่วนการตั้งค่า Prefix วันที่
-            today_prefix = datetime.now(ICT).strftime("%Y%m%d")
-    
-            # ดึงข้อมูลล่าสุดมาดูว่าวันนี้รันไปถึงเลขไหนแล้ว
-            jig_count_res = supabase.table("jigs") \
-                .select("jig_model_code") \
-                .like("jig_model_code", f"{today_prefix}%") \
-                .order("jig_model_code", desc=True) \
-                .limit(1) \
-                .execute()
-    
-            # หาเลขลำดับเริ่มต้น (ถ้ายังไม่มีเลยให้เริ่มที่ 0)
-            if jig_count_res.data:
-                last_code = jig_count_res.data[0]['jig_model_code']
-                last_number = int(last_code[-3:]) # ดึง 3 หลักสุดท้ายมาเป็นตัวเลข
-            else:
-                last_number = 0
-
-            with st.form("bulk_jig_form", clear_on_submit=True):
-                col_lot, col_qty = st.columns(2)
-                lot_no_input = col_lot.text_input("หมายเลข Lot (Lot No.)", placeholder=" 1 ")
-                jig_quantity = col_qty.number_input("จำนวนจิ๊กที่ต้องการสร้าง", min_value=1, max_value=50, value=1)
-        
-                st.info(f"💡 ระบบจะเริ่มรันรหัสตั้งแต่: **{today_prefix}{last_number + 1:03d}** ถึง **{today_prefix}{last_number + jig_quantity:03d}**")
-
-                if st.form_submit_button("🚀 สร้างรหัสจิ๊กทั้งหมด"):
-                    if not lot_no_input:
-                        st.error("❌ กรุณาระบุ Lot No. ก่อนสร้าง")
-                    else:
-                        new_jigs = []
-                # วนลูปสร้างข้อมูลตามจำนวนที่ระบุ
-                        for i in range(1, jig_quantity + 1):
-                            new_code = f"{today_prefix}{last_number + i:03d}"
-                            new_jigs.append({
-                                "jig_model_code": new_code,
-                                "lot_no": lot_no_input,
-                                "total_pcs_in_jig": 0
-                            })
-                
-                        try:
-                    # บันทึกข้อมูลแบบก้อนเดียว (Bulk Insert) เพื่อความรวดเร็ว
-                            supabase.table("jigs").insert(new_jigs).execute()
-                            st.success(f"✅ สำเร็จ! สร้างจิ๊กจำนวน {jig_quantity} อัน ลงใน Lot {lot_no_input} เรียบร้อยแล้ว")
-                            time.sleep(2)
                             st.rerun()
-                        except Exception as e:
-                            st.error(f"เกิดข้อผิดพลาด: {e}")
 
-    # ส่วนเสริม: แสดงประวัติการสร้างของวันนี้
-            with st.expander("📝 ดูรายการจิ๊กที่สร้างวันนี้"):
-                today_jigs = supabase.table("jigs").select("*").like("jig_model_code", f"{today_prefix}%").order("jig_model_code", desc=True).execute()
-                if today_jigs.data:
-                    st.dataframe(pd.DataFrame(today_jigs.data), use_container_width=True)
-    #-------------------------------------------------------------------------------                       
-        with sub_log:
+        # --- 3.2 ลงทะเบียนจิ๊ก (Bulk) ---
+        with sub_tabs_jig[1]:
+            st.subheader("📦 ลงทะเบียนจิ๊กชุดใหม่ (Bulk Registration)")
+            today_prefix = datetime.now(ICT).strftime("%Y%m%d")
+            jig_count_res = supabase.table("jigs").select("jig_model_code").like("jig_model_code", f"{today_prefix}%").order("jig_model_code", desc=True).limit(1).execute()
+            last_number = int(jig_count_res.data[0]['jig_model_code'][-3:]) if jig_count_res.data else 0
+
+            with st.form("bulk_jig_form_new", clear_on_submit=True):
+                col_lot, col_qty = st.columns(2)
+                lot_no_input = col_lot.text_input("หมายเลข Lot (Lot No.)")
+                jig_qty = col_qty.number_input("จำนวนจิ๊ก", min_value=1, max_value=50, value=1)
+                if st.form_submit_button("🚀 สร้างรหัสจิ๊กทั้งหมด"):
+                    if lot_no_input:
+                        new_jigs = [{"jig_model_code": f"{today_prefix}{last_number + i:03d}", "lot_no": lot_no_input, "total_pcs_in_jig": 0} for i in range(1, jig_qty + 1)]
+                        supabase.table("jigs").insert(new_jigs).execute()
+                        st.success(f"สร้างจิ๊ก {jig_qty} อัน สำเร็จ")
+                        st.rerun()
+
+        # --- 3.3 บันทึกผลผลิต (Log) ---
+        with sub_tabs_jig[2]:
             prods_res = supabase.table("products").select("product_id, product_code, product_name").execute().data
             if prods_res:
                 display_options = {f"{p['product_code']} | {p['product_name']}": p['product_id'] for p in prods_res}
