@@ -547,7 +547,7 @@ if menu == "Dashboard":
     st.markdown("---")
 
     # --- Color Tank Analysis ---
-   st.subheader("🎨 วิเคราะห์ข้อมูลบ่อสี (Color Tanks)")
+    st.subheader("🎨 วิเคราะห์ข้อมูลบ่อสี (Color Tanks)")
     logs = load_color_logs()
     if logs:
         df = pd.DataFrame(logs)
