@@ -547,61 +547,95 @@ if menu == "Dashboard":
     st.markdown("---")
 
     # --- Color Tank Analysis ---
-    st.subheader("🎨 วิเคราะห์ข้อมูลบ่อสี (Color Tanks)")
-    logs = load_color_logs()
-    if logs:
-        df = pd.DataFrame(logs)
-        df["recorded_at"] = pd.to_datetime(df["recorded_at"])
-        tank_map = load_tanks()
-        inv_tank_map = {v: k for k, v in tank_map.items()}
-        df["tank_name"] = df["tank_id"].map(inv_tank_map)
-        latest = df.drop_duplicates("tank_id").copy()
-        latest = latest.sort_values("tank_name") 
-        if not latest.empty:
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
-            fig.add_trace(
-                go.Bar(
-                    x=latest["tank_name"],
-                    y=latest["ph_value"],
-                    name="ค่า pH (Std: 5.0-6.0)",
-                    marker_color="#98FB98",
-                    text=latest["ph_value"],
-                    textposition='auto',
-                    offsetgroup=1,
-                ),
-                secondary_y=False,
-            )
-            fig.add_trace(
-                go.Bar(
-                    x=latest["tank_name"],
-                    y=latest["temperature"],
-                    name="อุณหภูมิ (Std: 30-40 °C)",
-                    marker_color="#AFEEEE",
-                    text=latest["temperature"],
-                    textposition='auto',
-                    offsetgroup=2,
-                ),
-                secondary_y=True,
-            )
-            fig.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14], dtick=1, title_font=dict(color="#22c55e"), tickfont=dict(color="#22c55e"), gridcolor='rgba(34, 197, 94, 0.1)')
-            fig.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100], title_font=dict(color="#3b82f6"), tickfont=dict(color="#3b82f6"), showgrid=False)
-            fig.add_hline(y=PH_MIN, line_dash="dash", line_color="#166534", secondary_y=False)
-            fig.add_hline(y=PH_MAX, line_dash="dash", line_color="#166534", secondary_y=False)
-            fig.add_hline(y=TEMP_COLOR_MIN, line_dash="dot", line_color="#1d4ed8", secondary_y=True)
-            fig.add_hline(y=TEMP_COLOR_MAX, line_dash="dot", line_color="#1d4ed8", secondary_y=True)
-            fig.update_layout(title=dict(text="เปรียบเทียบค่า pH และอุณหภูมิ (ล่าสุดรายบ่อ)", x=0.5), xaxis_title="ชื่อบ่อสี", barmode="group", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), height=500, margin=dict(t=100))
-            st.plotly_chart(fig, use_container_width=True)
+   st.subheader("🎨 วิเคราะห์ข้อมูลบ่อสี (Color Tanks)")
+logs = load_color_logs()
+if logs:
+    df = pd.DataFrame(logs)
+    df["recorded_at"] = pd.to_datetime(df["recorded_at"])
+    tank_map = load_tanks()
+    inv_tank_map = {v: k for k, v in tank_map.items()}
+    df["tank_name"] = df["tank_id"].map(inv_tank_map)
+    latest = df.drop_duplicates("tank_id").copy()
+    latest = latest.sort_values("tank_name") 
 
-        st.subheader("🚨 ตารางแจ้งเตือนบ่อสี")
-        alert_data = []
-        for _, row in latest.iterrows():
-            alert_data.append({
-                "Tank": row["tank_name"],
-                "pH": f"{get_status_icon(row['ph_value'], PH_MIN, PH_MAX)} {row['ph_value']:.2f}",
-                "Temp (°C)": f"{get_status_icon(row['temperature'], TEMP_COLOR_MIN, TEMP_COLOR_MAX)} {row['temperature']:.1f}"
-            })
-        st.dataframe(pd.DataFrame(alert_data), use_container_width=True)
+    if not latest.empty:
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # กราฟแท่งค่า pH
+        fig.add_trace(
+            go.Bar(
+                x=latest["tank_name"],
+                y=latest["ph_value"],
+                name="ค่า pH (Std: 5.0-6.0)",
+                marker_color="#22c55e", # สีเขียวเข้มขึ้นเพื่อให้ตัดกับพื้นหลัง
+                text=latest["ph_value"],
+                textposition='auto',
+                offsetgroup=1,
+            ),
+            secondary_y=False,
+        )
+        
+        # กราฟแท่งอุณหภูมิ
+        fig.add_trace(
+            go.Bar(
+                x=latest["tank_name"],
+                y=latest["temperature"],
+                name="อุณหภูมิ (Std: 30-40 °C)",
+                marker_color="#3b82f6", # สีฟ้าเข้มขึ้น
+                text=latest["temperature"],
+                textposition='auto',
+                offsetgroup=2,
+            ),
+            secondary_y=True,
+        )
 
+        # --- ส่วนที่แก้ไข: เปลี่ยนจาก Line เป็น พื้นที่มาตรฐาน (hrect) ---
+        
+        # 1. พื้นที่มาตรฐาน pH (5.0 - 6.0)
+        fig.add_hrect(
+            y0=PH_MIN, y1=PH_MAX, 
+            fillcolor="green", opacity=0.15, 
+            line_width=0, 
+            annotation_text="Standard pH", annotation_position="top left",
+            secondary_y=False
+        )
+
+        # 2. พื้นที่มาตรฐาน Temperature (30 - 40)
+        fig.add_hrect(
+            y0=TEMP_COLOR_MIN, y1=TEMP_COLOR_MAX, 
+            fillcolor="blue", opacity=0.1, 
+            line_width=0, 
+            annotation_text="Standard Temp", annotation_position="top right",
+            secondary_y=True
+        )
+
+        # ตั้งค่าแกน Y
+        fig.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14], dtick=1, title_font=dict(color="#22c55e"), tickfont=dict(color="#22c55e"), gridcolor='rgba(34, 197, 94, 0.1)')
+        fig.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100], title_font=dict(color="#3b82f6"), tickfont=dict(color="#3b82f6"), showgrid=False)
+        
+        # ลบโค้ด add_hline เดิมออกไปแล้ว
+        
+        fig.update_layout(
+            title=dict(text="เปรียบเทียบค่า pH และอุณหภูมิ (ล่าสุดรายบ่อ)", x=0.5), 
+            xaxis_title="ชื่อบ่อสี", 
+            barmode="group", 
+            legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), 
+            height=500, 
+            margin=dict(t=120)
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ส่วนตารางแจ้งเตือน (คงเดิม)
+    st.subheader("🚨 ตารางแจ้งเตือนบ่อสี")
+    alert_data = []
+    for _, row in latest.iterrows():
+        alert_data.append({
+            "Tank": row["tank_name"],
+            "pH": f"{get_status_icon(row['ph_value'], PH_MIN, PH_MAX)} {row['ph_value']:.2f}",
+            "Temp (°C)": f"{get_status_icon(row['temperature'], TEMP_COLOR_MIN, TEMP_COLOR_MAX)} {row['temperature']:.1f}"
+        })
+    st.dataframe(pd.DataFrame(alert_data), use_container_width=True)
         # ================= INDIVIDUAL TANK VIEW =================
         # ================= INDIVIDUAL TANK VIEW (MULTI-SELECT & TIME FILTER) =================
     st.markdown("---")
