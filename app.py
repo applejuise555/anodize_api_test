@@ -344,7 +344,7 @@ def render_tank_map():
 
     components.html(html, height=750, scrolling=False)
 
-# ================= 3. EDIT DATA (แก้ไขแบบละเอียด: สินค้า, สี, แถว, เศษ) =================
+# ================= 3. EDIT DATA (ปรับให้โชว์ รหัส + ชื่อสินค้า) =================
 def show_data_editor():
     st.title("🛠️ จัดการและแก้ไขข้อมูลย้อนหลัง")
     
@@ -354,6 +354,7 @@ def show_data_editor():
         st.subheader("แก้ไขข้อมูลสินค้า")
         res = supabase.table("products").select("*").execute()
         if res.data:
+            # ปรับตรงนี้: แสดง รหัส | ชื่อ ใน Selectbox
             prod_options = {f"{p['product_code']} | {p['product_name']}": p for p in res.data}
             selected_p_label = st.selectbox("เลือกสินค้าที่ต้องการแก้ไข", list(prod_options.keys()))
             p_data = prod_options[selected_p_label]
@@ -366,12 +367,17 @@ def show_data_editor():
                 new_finish = col2.text_input("พื้นผิว (Surface)", value=p_data.get('surface_finish', '-'))
                 
                 if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลงสินค้า"):
-                    supabase.table("products").update({
-                        "product_code": new_code, "product_name": new_name,
-                        "unit_volume": new_vol, "surface_finish": new_finish
-                    }).eq("product_id", p_data['product_id']).execute()
-                    st.success("✅ อัปเดตข้อมูลสินค้าสำเร็จ!")
-                    st.rerun()
+                    try:
+                        supabase.table("products").update({
+                            "product_code": new_code, "product_name": new_name,
+                            "unit_volume": new_vol, "surface_finish": new_finish
+                        }).eq("product_id", p_data['product_id']).execute()
+                        st.success("✅ อัปเดตข้อมูลสินค้าสำเร็จ!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+        else:
+            st.info("ไม่มีข้อมูลสินค้าในระบบ")
 
     elif edit_mode == "📜 ประวัติงานจิ๊ก (Jig Logs)":
         st.subheader("แก้ไขประวัติการบันทึกงานแบบละเอียด")
@@ -390,26 +396,27 @@ def show_data_editor():
             .order("recorded_date", desc=True).execute()
         
         if logs_res.data:
+            # ปรับตรงนี้: ให้แสดงชื่อสินค้าในรายการ Log ด้วย
             log_options = {
-                f"🕒 {l['recorded_date'][11:16]}น. | จิ๊ก: {l['jigs']['jig_model_code']} | สินค้าเดิม: {l['products']['product_code']}": l 
+                f"🕒 {l['recorded_date'][11:16]}น. | จิ๊ก: {l['jigs']['jig_model_code']} | สินค้า: {l['products']['product_code']} - {l['products']['product_name']}": l 
                 for l in logs_res.data
             }
             selected_log_label = st.selectbox(f"รายการวันที่ {filter_date}", list(log_options.keys()))
             l_data = log_options[selected_log_label]
             
-            # 2. ฟอร์มแก้ไขแบบละเอียด
             with st.form("edit_log_detailed_form"):
                 st.markdown(f"### 📝 แก้ไขข้อมูลจิ๊ก: `{l_data['jigs']['jig_model_code']}`")
                 
-                # --- ส่วนที่ 1: สินค้าและสี ---
                 c1, c2 = st.columns(2)
-                # ดึงรายการสินค้าทั้งหมดเผื่อกรณีต้องการเปลี่ยนชนิดสินค้าใน Log นั้น
-                all_prods = supabase.table("products").select("product_id, product_code").execute().data
-                prod_list = {p['product_code']: p['product_id'] for p in all_prods}
-                current_p_code = l_data['products']['product_code']
+                # ดึงรายการสินค้าทั้งหมด และปรับให้โชว์ รหัส | ชื่อ ในเมนูแก้ไข
+                all_prods = supabase.table("products").select("product_id, product_code, product_name").execute().data
+                prod_list_display = {f"{p['product_code']} | {p['product_name']}": p['product_id'] for p in all_prods}
                 
-                new_p_code = c1.selectbox("เปลี่ยนสินค้า", list(prod_list.keys()), 
-                                          index=list(prod_list.keys()).index(current_p_code))
+                # หาค่า Default สำหรับเมนูเลือกสินค้า
+                current_p_label = f"{l_data['products']['product_code']} | {l_data['products']['product_name']}"
+                
+                new_p_label = c1.selectbox("เปลี่ยนสินค้า", list(prod_list_display.keys()), 
+                                           index=list(prod_list_display.keys()).index(current_p_label) if current_p_label in prod_list_display else 0)
                 
                 color_list = sorted(list(set(TANK_COLOR_MAP.values())))
                 current_color = l_data.get('color', color_list[0])
@@ -418,32 +425,25 @@ def show_data_editor():
                 
                 st.divider()
                 
-                # --- ส่วนที่ 2: จำนวนชิ้นงาน (แยกส่วน) ---
                 col_a, col_b, col_c = st.columns(3)
-                # ดึงค่าเดิมจาก DB (ถ้าไม่มีให้เป็น 0)
-                old_pcs_per_row = int(l_data.get('pcs_per_row', 0))
-                old_rows = int(l_data.get('rows_filled', 0))
-                old_partial = int(l_data.get('partial_pieces', 0))
+                new_pcs_per_row = col_a.number_input("จำนวนต่อแถว", min_value=0, value=int(l_data.get('pcs_per_row', 0)))
+                new_rows = col_b.number_input("จำนวนแถวที่เต็ม", min_value=0, value=int(l_data.get('rows_filled', 0)))
+                new_partial = col_c.number_input("เศษ (ชิ้น)", min_value=0, value=int(l_data.get('partial_pieces', 0)))
                 
-                new_pcs_per_row = col_a.number_input("จำนวนต่อแถว", min_value=0, value=old_pcs_per_row)
-                new_rows = col_b.number_input("จำนวนแถวที่เต็ม", min_value=0, value=old_rows)
-                new_partial = col_c.number_input("เศษ (ชิ้น)", min_value=0, value=old_partial)
-                
-                # คำนวณยอดรวมใหม่
                 new_total_pcs = (new_rows * new_pcs_per_row) + new_partial
                 
-                # ดึงค่า unit_volume ของสินค้าที่เลือกใหม่
-                selected_prod_info = supabase.table("products").select("unit_volume").eq("product_id", prod_list[new_p_code]).single().execute().data
+                # ดึงค่าปริมาตรจากสินค้าตัวที่เลือกใหม่
+                selected_prod_id = prod_list_display[new_p_label]
+                selected_prod_info = supabase.table("products").select("unit_volume").eq("product_id", selected_prod_id).single().execute().data
                 u_vol = selected_prod_info['unit_volume'] or 0
                 new_total_vol = new_total_pcs * u_vol
                 
-                # แสดงผลการคำนวณแบบ Real-time
                 st.info(f"📊 **สรุปยอดใหม่:** จำนวนรวม **{new_total_pcs}** ชิ้น | ปริมาตรรวม **{new_total_vol:,.2f}** mm³")
                 
                 if st.form_submit_button("💾 ยืนยันการแก้ไขข้อมูลทั้งหมด"):
                     try:
                         supabase.table("jig_usage_log").update({
-                            "product_id": prod_list[new_p_code],
+                            "product_id": selected_prod_id,
                             "color": new_color,
                             "pcs_per_row": new_pcs_per_row,
                             "rows_filled": new_rows,
