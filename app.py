@@ -109,16 +109,43 @@ def render_tank_map():
         margin:auto;
         background:#f5f5f5;
         border:2px solid #999;
+        overflow:hidden;
     }
 
-    div.stButton > button{
-        position:absolute;
-        border:2px solid #333;
-        border-radius:8px;
-        color:white;
-        font-weight:bold;
-        font-size:14px;
-        cursor:pointer;
+    /* ปุ่มทุกตัว */
+    .tank-btn button{
+        position:absolute !important;
+        border:2px solid #333 !important;
+        border-radius:8px !important;
+        color:white !important;
+        font-weight:bold !important;
+        font-size:14px !important;
+    }
+
+    /* ===== ตำแหน่งแต่ละบ่อ ===== */
+
+    .tank-5black button{
+        left:10px;
+        top:10px;
+        width:70px;
+        height:70px;
+        background:black !important;
+    }
+
+    .tank-2red button{
+        left:100px;
+        top:10px;
+        width:70px;
+        height:70px;
+        background:red !important;
+    }
+
+    .tank-3violet button{
+        left:190px;
+        top:10px;
+        width:70px;
+        height:70px;
+        background:purple !important;
     }
 
     </style>
@@ -127,52 +154,22 @@ def render_tank_map():
     st.markdown('<div class="map-wrap">', unsafe_allow_html=True)
 
     # ===== 5Black =====
-    st.markdown("""
-    <style>
-    div[data-testid="stButton"]:nth-of-type(1) button{
-        left:10px;
-        top:10px;
-        width:70px;
-        height:70px;
-        background:black;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    if st.button("5Black"):
+    st.markdown('<div class="tank-btn tank-5black">', unsafe_allow_html=True)
+    if st.button("5Black", key="tank_5black"):
         record_modal("5Black")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ===== 2Red =====
-    st.markdown("""
-    <style>
-    div[data-testid="stButton"]:nth-of-type(2) button{
-        left:145px;
-        top:10px;
-        width:65px;
-        height:70px;
-        background:red;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    if st.button("2Red"):
+    st.markdown('<div class="tank-btn tank-2red">', unsafe_allow_html=True)
+    if st.button("2Red", key="tank_2red"):
         record_modal("2Red")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ===== 3Violet =====
-    st.markdown("""
-    <style>
-    div[data-testid="stButton"]:nth-of-type(3) button{
-        left:210px;
-        top:10px;
-        width:65px;
-        height:70px;
-        background:purple;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    if st.button("3Violet"):
+    st.markdown('<div class="tank-btn tank-3violet">', unsafe_allow_html=True)
+    if st.button("3Violet", key="tank_3violet"):
         record_modal("3Violet")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
    
