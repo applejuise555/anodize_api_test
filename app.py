@@ -197,7 +197,11 @@ def render_tank_map():
         height=750
     )
 
-    return clicked
+    if clicked:
+        st.session_state.selected_tank = clicked
+    
+    return st.session_state.get("selected_tank")
+
 
     # ===== 5Black =====
     st.markdown('<div class="tank-btn tank-5black">', unsafe_allow_html=True)
@@ -563,11 +567,12 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
 
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
-
-    selected_tank = render_tank_map()
-
-    if selected_tank:
-        record_modal(selected_tank)
+    if st.session_state.get("selected_tank"):
+        record_modal(st.session_state.selected_tank)
+        render_tank_map()
+    
+    if st.session_state.get("selected_tank"):
+        record_modal(st.session_state.selected_tank)
 #*************************************************************************
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
     sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
