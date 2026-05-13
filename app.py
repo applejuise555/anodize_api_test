@@ -354,31 +354,34 @@ def show_data_editor():
         st.subheader("แก้ไขข้อมูลสินค้าแบบละเอียด")
         res = supabase.table("products").select("*").execute()
         if res.data:
-            # แสดง รหัส | ชื่อ ใน Selectbox
             prod_options = {f"{p['product_code']} | {p['product_name']}": p for p in res.data}
             selected_p_label = st.selectbox("เลือกสินค้าที่ต้องการแก้ไข", list(prod_options.keys()))
             p_data = prod_options[selected_p_label]
             
-            with st.form("edit_product_form_v2"):
+            # --- ส่วนสำคัญ: ย้าย Selectbox เลือกทรงออกมานอก Form เพื่อให้ UI เปลี่ยนตามทันที ---
+            current_shape_in_db = p_data.get('shape', 'สี่เหลี่ยม')
+            shapes = ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง"]
+            
+            # ใช้ st.selectbox ตรงนี้เพื่อให้แอป Rerun เมื่อเปลี่ยนค่า
+            new_shape = st.selectbox("เปลี่ยนรูปทรง", shapes, index=shapes.index(current_shape_in_db) if current_shape_in_db in shapes else 0)
+            
+            # หลังจากเลือกทรงแล้ว ค่อยเข้าสู่ฟอร์มแก้ไขข้อมูลที่เหลือ
+            with st.form("edit_product_form_v3"):
                 col1, col2 = st.columns(2)
                 new_code = col1.text_input("รหัสสินค้า", value=p_data['product_code'])
                 new_name = col1.text_input("ชื่อสินค้า", value=p_data['product_name'])
-                
-                # --- ส่วนแก้ไขรูปทรง ---
-                current_shape = p_data.get('shape', 'สี่เหลี่ยม')
-                shapes = ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง"]
-                new_shape = col2.selectbox("เปลี่ยนรูปทรง", shapes, index=shapes.index(current_shape) if current_shape in shapes else 0)
                 new_finish = col2.text_input("พื้นผิว (Surface)", value=p_data.get('surface_finish', '-'))
 
                 st.divider()
-                st.write(f"📏 **แก้ไขสัดส่วนชิ้นงาน (คำนวณตามทรง: {new_shape})**")
+                st.write(f"📏 **แก้ไขสัดส่วนชิ้นงาน (ทรง: {new_shape})**")
                 
                 c_a, c_b, c_c = st.columns(3)
+                # ดึงค่าเดิมมาเป็นค่าเริ่มต้น (Default Value)
                 h = c_a.number_input("ความสูง/ยาว (H) [mm]", min_value=0.0, value=float(p_data.get('height', 0)))
                 
-                # ตัวแปรสำหรับคำนวณ
                 u_vol, w, t, od, id_inner = 0.0, 0.0, 0.0, 0.0, 0.0
 
+                # เงื่อนไขการโชว์ช่องกรอก จะเปลี่ยนตาม new_shape ที่เลือกไว้นอกฟอร์ม
                 if new_shape == "สี่เหลี่ยม":
                     w = c_b.number_input("กว้าง [mm]", min_value=0.0, value=float(p_data.get('width', 0)))
                     t = c_c.number_input("หนา [mm]", min_value=0.0, value=float(p_data.get('thickness', 0)))
@@ -391,11 +394,11 @@ def show_data_editor():
                     t_wall = c_c.number_input("ความหนาเนื้อ [mm]", min_value=0.0, value=float(p_data.get('thickness', 0)))
                     id_inner = max(0.0, od - (2 * t_wall))
                     u_vol = math.pi * ((od/2)**2 - (id_inner/2)**2) * h
-                    t = t_wall # เก็บค่าความหนาลง field thickness
+                    t = t_wall 
 
-                st.info(f"💡 ปริมาตรใหม่ที่คำนวณได้: **{u_vol:,.2f} mm³**")
+                st.info(f"💡 ปริมาตรที่คำนวณใหม่: **{u_vol:,.2f} mm³**")
                 
-                if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลงสินค้าและรูปทรง"):
+                if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลงสินค้า"):
                     try:
                         supabase.table("products").update({
                             "product_code": new_code,
@@ -410,13 +413,11 @@ def show_data_editor():
                             "surface_finish": new_finish
                         }).eq("product_id", p_data['product_id']).execute()
                         
-                        st.success("✅ อัปเดตข้อมูลสินค้าและปริมาตรเรียบร้อย!")
+                        st.success("✅ อัปเดตข้อมูลสำเร็จ!")
                         time.sleep(1)
                         st.rerun()
                     except Exception as e:
                         st.error(f"เกิดข้อผิดพลาด: {e}")
-        else:
-            st.info("ไม่มีข้อมูลสินค้าในระบบ")
 
     elif edit_mode == "📜 ประวัติงานจิ๊ก (Jig Logs)":
         st.subheader("แก้ไขประวัติการบันทึกงานแบบละเอียด")
