@@ -99,48 +99,54 @@ def get_quarter_range(year, quarter):
 #============================================================================================
 def render_tank_map():
 
-    html_map = """
+    st.markdown("""
     <style>
 
-    .plant-map{
+    .map-wrap{
         position:relative;
         width:1100px;
         height:720px;
+        margin:auto;
         background:#f5f5f5;
         border:2px solid #999;
-        margin:auto;
     }
 
-    .tank{
+    .tank-box{
         position:absolute;
         border:2px solid #333;
-        border-radius:6px;
+        border-radius:8px;
         color:white;
-        font-size:11px;
         font-weight:bold;
         display:flex;
         align-items:center;
         justify-content:center;
-        text-align:center;
-        box-sizing:border-box;
-        font-family:sans-serif;
+        font-size:12px;
+        pointer-events:none;
+    }
+
+    div.stButton > button{
+        height:70px;
+        opacity:0;
     }
 
     </style>
+    """, unsafe_allow_html=True)
 
-    <div class="plant-map">
+    # พื้นหลังผัง
+    st.markdown("""
+    <div class="map-wrap">
 
-        <div class="tank"
+        <div class="tank-box"
             style="
             left:10px;
             top:10px;
             width:70px;
             height:70px;
-            background:#111;">
+            background:black;">
             5Black
         </div>
 
-        <div class="tank"
+        <div class="tank-box"
             style="
             left:145px;
             top:10px;
@@ -150,7 +156,7 @@ def render_tank_map():
             2Red
         </div>
 
-        <div class="tank"
+        <div class="tank-box"
             style="
             left:210px;
             top:10px;
@@ -161,28 +167,25 @@ def render_tank_map():
         </div>
 
     </div>
-    """
+    """, unsafe_allow_html=True)
 
-    components.html(html_map, height=740)
+    # ปุ่มจริง
+    c1,c2,c3 = st.columns([1,1,1])
 
-    st.markdown("### เลือกบ่อ")
-
-    col1,col2,col3 = st.columns(3)
-
-    with col1:
-        if st.button("5Black", use_container_width=True):
+    with c1:
+        if st.button("5Black"):
             st.session_state.selected_tank = "5Black"
-            st.rerun()
+            record_modal("5Black")
 
-    with col2:
-        if st.button("2Red", use_container_width=True):
+    with c2:
+        if st.button("2Red"):
             st.session_state.selected_tank = "2Red"
-            st.rerun()
+            record_modal("2Red")
 
-    with col3:
-        if st.button("3Violet", use_container_width=True):
+    with c3:
+        if st.button("3Violet"):
             st.session_state.selected_tank = "3Violet"
-            st.rerun()
+            record_modal("3Violet")
    
 # --- 4. ฟังก์ชันรับค่า Input (Dialog) - แก้ไข Indent เรียบร้อย ---
 @st.dialog("บันทึกข้อมูลบ่อ")
