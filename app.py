@@ -101,23 +101,26 @@ def get_quarter_range(year, quarter):
     return start_date, end_date
 #============================================================================================
 def tank_button(name, color, key):
-    st.markdown(
-        f"""
-        <div style="
-            background:{color};
-            height:65px;
-            border-radius:8px;
-            border:2px solid #444;
-            margin-bottom:4px;
-        "></div>
-        """,
-        unsafe_allow_html=True
-    )
+
+    button_style = f"""
+    <style>
+    div[data-testid="stButton"] button[kind="secondary"]#{key} {{
+        background:{color};
+        color:white;
+        height:70px;
+        border-radius:8px;
+        border:2px solid #444;
+        font-weight:bold;
+        font-size:13px;
+    }}
+    </style>
+    """
+
+    st.markdown(button_style, unsafe_allow_html=True)
 
     if st.button(name, key=key, use_container_width=True):
         st.session_state.selected_tank = name
         st.rerun()
-
 
 def render_tank_map():
 
