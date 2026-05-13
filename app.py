@@ -9,6 +9,8 @@ from plotly.subplots import make_subplots
 import time
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit_javascript import st_javascript
+import json
 
 
 # 1. ตั้งค่า Timezone (UTC +7)
@@ -99,59 +101,103 @@ def get_quarter_range(year, quarter):
 #============================================================================================
 def render_tank_map():
 
-    st.markdown("""
+    html_code = """
     <style>
 
-    .map-wrap{
+    .plant-map{
         position:relative;
         width:1100px;
         height:720px;
+        background:#f0f0f0;
+        border:3px solid #888;
         margin:auto;
-        background:#f5f5f5;
-        border:2px solid #999;
         overflow:hidden;
+        border-radius:10px;
     }
 
-    /* ปุ่มทุกตัว */
-    .tank-btn button{
-        position:absolute !important;
-        border:2px solid #333 !important;
-        border-radius:8px !important;
-        color:white !important;
-        font-weight:bold !important;
-        font-size:14px !important;
+    .tank{
+        position:absolute;
+        border-radius:10px;
+        border:2px solid #222;
+        color:white;
+        font-weight:bold;
+        font-size:16px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        cursor:pointer;
+        user-select:none;
+        transition:0.2s;
     }
 
-    /* ===== ตำแหน่งแต่ละบ่อ ===== */
-
-    .tank-5black button{
-        left:10px;
-        top:10px;
-        width:70px;
-        height:70px;
-        background:black !important;
+    .tank:hover{
+        transform:scale(1.05);
+        box-shadow:0 0 10px rgba(0,0,0,0.4);
     }
 
-    .tank-2red button{
-        left:100px;
-        top:10px;
-        width:70px;
-        height:70px;
-        background:red !important;
+    /* ===== ตำแหน่งบ่อ ===== */
+
+    #tank5{
+        left:20px;
+        top:20px;
+        width:90px;
+        height:90px;
+        background:black;
     }
 
-    .tank-3violet button{
-        left:190px;
-        top:10px;
-        width:70px;
-        height:70px;
-        background:purple !important;
+    #tank2{
+        left:130px;
+        top:20px;
+        width:90px;
+        height:90px;
+        background:red;
+    }
+
+    #tank3{
+        left:240px;
+        top:20px;
+        width:90px;
+        height:90px;
+        background:purple;
     }
 
     </style>
-    """, unsafe_allow_html=True)
 
-    st.markdown('<div class="map-wrap">', unsafe_allow_html=True)
+    <div class="plant-map">
+
+        <div class="tank" id="tank5"
+             onclick="window.parent.postMessage({
+                 type:'streamlit:setComponentValue',
+                 value:'5Black'
+             }, '*')">
+            5Black
+        </div>
+
+        <div class="tank" id="tank2"
+             onclick="window.parent.postMessage({
+                 type:'streamlit:setComponentValue',
+                 value:'2Red'
+             }, '*')">
+            2Red
+        </div>
+
+        <div class="tank" id="tank3"
+             onclick="window.parent.postMessage({
+                 type:'streamlit:setComponentValue',
+                 value:'3Violet'
+             }, '*')">
+            3Violet
+        </div>
+
+    </div>
+    """
+
+    clicked = components.html(
+        html_code,
+        height=750
+    )
+
+    return clicked
 
     # ===== 5Black =====
     st.markdown('<div class="tank-btn tank-5black">', unsafe_allow_html=True)
@@ -515,8 +561,13 @@ if menu == "Dashboard":
 
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
+
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
-    render_tank_map()
+
+    selected_tank = render_tank_map()
+
+    if selected_tank:
+        record_modal(selected_tank)
 #*************************************************************************
     st.subheader("🛠️ การจัดการจิ๊กและสินค้า")
     sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
