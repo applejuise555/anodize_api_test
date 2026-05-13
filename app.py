@@ -570,7 +570,7 @@ if menu == "Dashboard":
 if menu == "บันทึกข้อมูลการผลิต":
 
     st.title("📝 ระบบบันทึกข้อมูลการผลิต")
-        query_params = st.query_params
+    query_params = st.query_params
     if "tank" in query_params and not st.session_state.dialog_open:
         st.session_state.selected_tank = query_params["tank"]
         st.session_state.dialog_open = True
