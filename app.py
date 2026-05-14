@@ -344,161 +344,101 @@ def render_tank_map():
 
     components.html(html, height=750, scrolling=False)
 
-# ================= 3. EDIT DATA (ปรับให้โชว์ รหัส + ชื่อสินค้า) =================
+# ================= 3. EDIT DATA (เพิ่มระบบคัดกรองวันที่) =================
 def show_data_editor():
     st.title("🛠️ จัดการและแก้ไขข้อมูลย้อนหลัง")
     
     edit_mode = st.radio("เลือกสิ่งที่ต้องการแก้ไข", ["📦 ข้อมูลสินค้า (Products)", "📜 ประวัติงานจิ๊ก (Jig Logs)"], horizontal=True)
 
     if edit_mode == "📦 ข้อมูลสินค้า (Products)":
-        st.subheader("แก้ไขข้อมูลสินค้าแบบละเอียด")
+        st.subheader("แก้ไขข้อมูลสินค้า")
         res = supabase.table("products").select("*").execute()
         if res.data:
             prod_options = {f"{p['product_code']} | {p['product_name']}": p for p in res.data}
             selected_p_label = st.selectbox("เลือกสินค้าที่ต้องการแก้ไข", list(prod_options.keys()))
             p_data = prod_options[selected_p_label]
             
-            # --- ส่วนสำคัญ: ย้าย Selectbox เลือกทรงออกมานอก Form เพื่อให้ UI เปลี่ยนตามทันที ---
-            current_shape_in_db = p_data.get('shape', 'สี่เหลี่ยม')
-            shapes = ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง"]
-            
-            # ใช้ st.selectbox ตรงนี้เพื่อให้แอป Rerun เมื่อเปลี่ยนค่า
-            new_shape = st.selectbox("เปลี่ยนรูปทรง", shapes, index=shapes.index(current_shape_in_db) if current_shape_in_db in shapes else 0)
-            
-            # หลังจากเลือกทรงแล้ว ค่อยเข้าสู่ฟอร์มแก้ไขข้อมูลที่เหลือ
-            with st.form("edit_product_form_v3"):
+            with st.form("edit_product_form"):
                 col1, col2 = st.columns(2)
                 new_code = col1.text_input("รหัสสินค้า", value=p_data['product_code'])
                 new_name = col1.text_input("ชื่อสินค้า", value=p_data['product_name'])
+                new_vol = col2.number_input("ปริมาตรต่อหน่วย (mm³)", value=float(p_data['unit_volume'] or 0), format="%.2f")
                 new_finish = col2.text_input("พื้นผิว (Surface)", value=p_data.get('surface_finish', '-'))
-
-                st.divider()
-                st.write(f"📏 **แก้ไขสัดส่วนชิ้นงาน (ทรง: {new_shape})**")
-                
-                c_a, c_b, c_c = st.columns(3)
-                # ดึงค่าเดิมมาเป็นค่าเริ่มต้น (Default Value)
-                h = c_a.number_input("ความสูง/ยาว (H) [mm]", min_value=0.0, value=float(p_data.get('height', 0)))
-                
-                u_vol, w, t, od, id_inner = 0.0, 0.0, 0.0, 0.0, 0.0
-
-                # เงื่อนไขการโชว์ช่องกรอก จะเปลี่ยนตาม new_shape ที่เลือกไว้นอกฟอร์ม
-                if new_shape == "สี่เหลี่ยม":
-                    w = c_b.number_input("กว้าง [mm]", min_value=0.0, value=float(p_data.get('width', 0)))
-                    t = c_c.number_input("หนา [mm]", min_value=0.0, value=float(p_data.get('thickness', 0)))
-                    u_vol = h * w * t
-                elif new_shape == "ทรงกระบอกทึบ":
-                    od = c_b.number_input("เส้นผ่านศูนย์กลาง (OD) [mm]", min_value=0.0, value=float(p_data.get('outer_diameter', 0)))
-                    u_vol = math.pi * ((od/2)**2) * h
-                elif new_shape == "ทรงกระบอกกลวง":
-                    od = c_b.number_input("OD [mm]", min_value=0.0, value=float(p_data.get('outer_diameter', 0)))
-                    t_wall = c_c.number_input("ความหนาเนื้อ [mm]", min_value=0.0, value=float(p_data.get('thickness', 0)))
-                    id_inner = max(0.0, od - (2 * t_wall))
-                    u_vol = math.pi * ((od/2)**2 - (id_inner/2)**2) * h
-                    t = t_wall 
-
-                st.info(f"💡 ปริมาตรที่คำนวณใหม่: **{u_vol:,.2f} mm³**")
                 
                 if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลงสินค้า"):
-                    try:
-                        supabase.table("products").update({
-                            "product_code": new_code,
-                            "product_name": new_name,
-                            "shape": new_shape,
-                            "unit_volume": u_vol,
-                            "height": h,
-                            "width": w,
-                            "thickness": t,
-                            "outer_diameter": od,
-                            "inner_diameter": id_inner,
-                            "surface_finish": new_finish
-                        }).eq("product_id", p_data['product_id']).execute()
-                        
-                        st.success("✅ อัปเดตข้อมูลสำเร็จ!")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาด: {e}")
+                    supabase.table("products").update({
+                        "product_code": new_code, "product_name": new_name,
+                        "unit_volume": new_vol, "surface_finish": new_finish
+                    }).eq("product_id", p_data['product_id']).execute()
+                    st.success("✅ อัปเดตข้อมูลสินค้าสำเร็จ!")
+                    st.rerun()
+        else:
+            st.info("ไม่มีข้อมูลสินค้าในระบบ")
 
     elif edit_mode == "📜 ประวัติงานจิ๊ก (Jig Logs)":
-        st.subheader("แก้ไขประวัติการบันทึกงานแบบละเอียด")
+        st.subheader("แก้ไขประวัติการบันทึกงาน")
         
-        # 1. คัดกรองวันที่
-        col_f1, col_f2 = st.columns([1, 2])
-        filter_date = col_f1.date_input("📅 เลือกวันที่", datetime.now(ICT))
+        # --- เพิ่มส่วนคัดกรองวันที่ ---
+        col_filter1, col_filter2 = st.columns([1, 2])
+        filter_date = col_filter1.date_input("📅 เลือกวันที่ต้องการหา", datetime.now(ICT))
         
-        start_dt = filter_date.strftime("%Y-%m-%d 00:00:00")
-        end_dt = filter_date.strftime("%Y-%m-%d 23:59:59")
+        # ดึงข้อมูลเฉพาะวันที่เลือก (เปรียบเทียบช่วงเวลา 00:00 - 23:59)
+        start_date = filter_date.strftime("%Y-%m-%d 00:00:00")
+        end_date = filter_date.strftime("%Y-%m-%d 23:59:59")
         
         logs_res = supabase.table("jig_usage_log")\
-            .select("*, products(*), jigs(jig_model_code)")\
-            .gte("recorded_date", start_dt)\
-            .lte("recorded_date", end_dt)\
+            .select("*, products(product_code, product_name, unit_volume), jigs(jig_model_code)")\
+            .gte("recorded_date", start_date)\
+            .lte("recorded_date", end_date)\
             .order("recorded_date", desc=True).execute()
         
         if logs_res.data:
-            # ปรับตรงนี้: ให้แสดงชื่อสินค้าในรายการ Log ด้วย
             log_options = {
-                f"🕒 {l['recorded_date'][11:16]}น. | จิ๊ก: {l['jigs']['jig_model_code']} | สินค้า: {l['products']['product_code']} - {l['products']['product_name']}": l 
+                f"🕒 {l['recorded_date'][11:16]}น. | จิ๊ก: {l['jigs']['jig_model_code']} | สินค้า: {l['products']['product_code']}": l 
                 for l in logs_res.data
             }
-            selected_log_label = st.selectbox(f"รายการวันที่ {filter_date}", list(log_options.keys()))
+            selected_log_label = st.selectbox(f"พบ {len(log_options)} รายการในวันที่เลือก", list(log_options.keys()))
             l_data = log_options[selected_log_label]
             
-            with st.form("edit_log_detailed_form"):
-                st.markdown(f"### 📝 แก้ไขข้อมูลจิ๊ก: `{l_data['jigs']['jig_model_code']}`")
-                
+            # --- ฟอร์มแก้ไขข้อมูล ---
+            with st.form("edit_log_form_v2"):
+                st.info(f"แก้ไขรายการของ: {l_data['products']['product_name']} (จิ๊ก {l_data['jigs']['jig_model_code']})")
                 c1, c2 = st.columns(2)
-                # ดึงรายการสินค้าทั้งหมด และปรับให้โชว์ รหัส | ชื่อ ในเมนูแก้ไข
-                all_prods = supabase.table("products").select("product_id, product_code, product_name").execute().data
-                prod_list_display = {f"{p['product_code']} | {p['product_name']}": p['product_id'] for p in all_prods}
                 
-                # หาค่า Default สำหรับเมนูเลือกสินค้า
-                current_p_label = f"{l_data['products']['product_code']} | {l_data['products']['product_name']}"
+                # ดึงจำนวนเดิมมาโชว์
+                current_pcs = int(l_data['total_pieces'] or 0)
+                new_pcs = c1.number_input("จำนวนชิ้นงานรวม (Pieces)", value=current_pcs, min_value=0)
                 
-                new_p_label = c1.selectbox("เปลี่ยนสินค้า", list(prod_list_display.keys()), 
-                                           index=list(prod_list_display.keys()).index(current_p_label) if current_p_label in prod_list_display else 0)
-                
+                # รายการสีจาก MAP
                 color_list = sorted(list(set(TANK_COLOR_MAP.values())))
                 current_color = l_data.get('color', color_list[0])
-                new_color = c2.selectbox("เปลี่ยนสี", color_list, 
-                                         index=color_list.index(current_color) if current_color in color_list else 0)
+                try:
+                    color_idx = color_list.index(current_color)
+                except:
+                    color_idx = 0
+                    
+                new_color = c2.selectbox("แก้ไขสีที่ใช้", color_list, index=color_idx)
                 
-                st.divider()
+                # คำนวณปริมาตรใหม่ตามจำนวนชิ้นที่แก้
+                unit_vol = l_data['products']['unit_volume'] or 0
+                new_total_vol = new_pcs * unit_vol
                 
-                col_a, col_b, col_c = st.columns(3)
-                new_pcs_per_row = col_a.number_input("จำนวนต่อแถว", min_value=0, value=int(l_data.get('pcs_per_row', 0)))
-                new_rows = col_b.number_input("จำนวนแถวที่เต็ม", min_value=0, value=int(l_data.get('rows_filled', 0)))
-                new_partial = col_c.number_input("เศษ (ชิ้น)", min_value=0, value=int(l_data.get('partial_pieces', 0)))
+                st.write(f"📊 ปริมาตรรวมจะเปลี่ยนเป็น: **{new_total_vol:,.2f} mm³**")
                 
-                new_total_pcs = (new_rows * new_pcs_per_row) + new_partial
-                
-                # ดึงค่าปริมาตรจากสินค้าตัวที่เลือกใหม่
-                selected_prod_id = prod_list_display[new_p_label]
-                selected_prod_info = supabase.table("products").select("unit_volume").eq("product_id", selected_prod_id).single().execute().data
-                u_vol = selected_prod_info['unit_volume'] or 0
-                new_total_vol = new_total_pcs * u_vol
-                
-                st.info(f"📊 **สรุปยอดใหม่:** จำนวนรวม **{new_total_pcs}** ชิ้น | ปริมาตรรวม **{new_total_vol:,.2f}** mm³")
-                
-                if st.form_submit_button("💾 ยืนยันการแก้ไขข้อมูลทั้งหมด"):
+                if st.form_submit_button("💾 ยืนยันการแก้ไขข้อมูล"):
                     try:
                         supabase.table("jig_usage_log").update({
-                            "product_id": selected_prod_id,
-                            "color": new_color,
-                            "pcs_per_row": new_pcs_per_row,
-                            "rows_filled": new_rows,
-                            "partial_pieces": new_partial,
-                            "total_pieces": new_total_pcs,
-                            "total_volume": new_total_vol
+                            "total_pieces": new_pcs,
+                            "total_volume": new_total_vol,
+                            "color": new_color
                         }).eq("log_id", l_data['log_id']).execute()
-                        
-                        st.success("✅ แก้ไขข้อมูลเรียบร้อยแล้ว!")
+                        st.success("✅ แก้ไขข้อมูลเรียบร้อย!")
                         time.sleep(1)
                         st.rerun()
                     except Exception as e:
                         st.error(f"เกิดข้อผิดพลาด: {e}")
         else:
-            st.warning(f"❌ ไม่พบประวัติในวันที่ {filter_date}")
+            st.warning(f"❌ ไม่พบประวัติการบันทึกในวันที่ {filter_date}")
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต", "🛠️ จัดการและแก้ไขข้อมูล"])
 
@@ -557,85 +497,51 @@ if menu == "Dashboard":
         df["tank_name"] = df["tank_id"].map(inv_tank_map)
         latest = df.drop_duplicates("tank_id").copy()
         latest = latest.sort_values("tank_name") 
-    
         if not latest.empty:
             fig = make_subplots(specs=[[{"secondary_y": True}]])
-            
-            # กราฟแท่งค่า pH
             fig.add_trace(
                 go.Bar(
                     x=latest["tank_name"],
                     y=latest["ph_value"],
                     name="ค่า pH (Std: 5.0-6.0)",
-                    marker_color="#22c55e", # สีเขียวเข้มขึ้นเพื่อให้ตัดกับพื้นหลัง
+                    marker_color="#98FB98",
                     text=latest["ph_value"],
                     textposition='auto',
                     offsetgroup=1,
                 ),
                 secondary_y=False,
             )
-            
-            # กราฟแท่งอุณหภูมิ
             fig.add_trace(
                 go.Bar(
                     x=latest["tank_name"],
                     y=latest["temperature"],
                     name="อุณหภูมิ (Std: 30-40 °C)",
-                    marker_color="#3b82f6", # สีฟ้าเข้มขึ้น
+                    marker_color="#AFEEEE",
                     text=latest["temperature"],
                     textposition='auto',
                     offsetgroup=2,
                 ),
                 secondary_y=True,
             )
-    
-            # --- ส่วนที่แก้ไข: เปลี่ยนจาก Line เป็น พื้นที่มาตรฐาน (hrect) ---
-            
-            # 1. พื้นที่มาตรฐาน pH (5.0 - 6.0)
-            fig.add_hrect(
-                y0=PH_MIN, y1=PH_MAX, 
-                fillcolor="green", opacity=0.15, 
-                line_width=0, 
-                annotation_text="Standard pH", annotation_position="top left",
-                secondary_y=False
-            )
-    
-            # 2. พื้นที่มาตรฐาน Temperature (30 - 40)
-            fig.add_hrect(
-                y0=TEMP_COLOR_MIN, y1=TEMP_COLOR_MAX, 
-                fillcolor="blue", opacity=0.1, 
-                line_width=0, 
-                annotation_text="Standard Temp", annotation_position="top right",
-                secondary_y=True
-            )
-    
-            # ตั้งค่าแกน Y
             fig.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14], dtick=1, title_font=dict(color="#22c55e"), tickfont=dict(color="#22c55e"), gridcolor='rgba(34, 197, 94, 0.1)')
             fig.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100], title_font=dict(color="#3b82f6"), tickfont=dict(color="#3b82f6"), showgrid=False)
-            
-            # ลบโค้ด add_hline เดิมออกไปแล้ว
-            
-            fig.update_layout(
-                title=dict(text="เปรียบเทียบค่า pH และอุณหภูมิ (ล่าสุดรายบ่อ)", x=0.5), 
-                xaxis_title="ชื่อบ่อสี", 
-                barmode="group", 
-                legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), 
-                height=500, 
-                margin=dict(t=120)
-            )
-            
+            fig.add_hline(y=PH_MIN, line_dash="dash", line_color="#166534", secondary_y=False)
+            fig.add_hline(y=PH_MAX, line_dash="dash", line_color="#166534", secondary_y=False)
+            fig.add_hline(y=TEMP_COLOR_MIN, line_dash="dot", line_color="#1d4ed8", secondary_y=True)
+            fig.add_hline(y=TEMP_COLOR_MAX, line_dash="dot", line_color="#1d4ed8", secondary_y=True)
+            fig.update_layout(title=dict(text="เปรียบเทียบค่า pH และอุณหภูมิ (ล่าสุดรายบ่อ)", x=0.5), xaxis_title="ชื่อบ่อสี", barmode="group", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), height=500, margin=dict(t=100))
             st.plotly_chart(fig, use_container_width=True)
 
-    # ส่วนตารางแจ้งเตือน (คงเดิม)
-    st.subheader("🚨 ตารางแจ้งเตือนบ่อสี")
-    alert_data = []
-    for _, row in latest.iterrows():
-        alert_data.append({
-            "Tank": row["tank_name"],
-            "pH": f"{get_status_icon(row['ph_value'], PH_MIN, PH_MAX)} {row['ph_value']:.2f}",
-            "Temp (°C)": f"{get_status_icon(row['temperature'], TEMP_COLOR_MIN, TEMP_COLOR_MAX)} {row['temperature']:.1f}"
-        })
-    st.dataframe(pd.DataFrame(alert_data), use_container_width=True)
+        st.subheader("🚨 ตารางแจ้งเตือนบ่อสี")
+        alert_data = []
+        for _, row in latest.iterrows():
+            alert_data.append({
+                "Tank": row["tank_name"],
+                "pH": f"{get_status_icon(row['ph_value'], PH_MIN, PH_MAX)} {row['ph_value']:.2f}",
+                "Temp (°C)": f"{get_status_icon(row['temperature'], TEMP_COLOR_MIN, TEMP_COLOR_MAX)} {row['temperature']:.1f}"
+            })
+        st.dataframe(pd.DataFrame(alert_data), use_container_width=True)
+
         # ================= INDIVIDUAL TANK VIEW =================
         # ================= INDIVIDUAL TANK VIEW (MULTI-SELECT & TIME FILTER) =================
     st.markdown("---")
@@ -852,59 +758,41 @@ if menu == "บันทึกข้อมูลการผลิต":
                 st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
                 time.sleep(1)
                 st.rerun()
-    # --- Tab 2: บ่ออโนไดซ์ & บ่อซีล (ที่เพิ่มเงื่อนไข Seal) ---
+    # --- Tab 2: บ่ออโนไดซ์ ---
     with tab_main[1]:
-        try:
-            # ดึงบ่อทั้ง Anodize และ Seal
-            res_tanks = supabase.table("tanks").select("tank_id, tank_name, tank_type")\
-                .in_("tank_type", ["Anodize", "Seal"]).execute()
+        ano_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
+        
+        # กรณีคลิกบ่ออโนไดซ์ (เช่น AnodizedPPool1)
+        default_ano = None
+
+        if ano_tanks:
+            ano_list = list(ano_tanks.keys())
+            sel_ano = st.selectbox(
+                "ยืนยันบ่ออโนไดซ์",
+                ano_list,
+                index=0,
+                key="ano_select"
+            )
             
-            if res_tanks.data:
-                tank_options = {t['tank_name']: t for t in res_tanks.data}
-                tank_list = list(tank_options.keys())
+            with st.form("ano_form", clear_on_submit=True):
+                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f")
+                temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
+                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
                 
-                # ใช้ clicked_tank ที่ประกาศไว้ด้านบน
-                start_idx_ano = tank_list.index(clicked_tank) if clicked_tank in tank_list else 0
-                
-                selected_tank_name = st.selectbox("เลือกบ่อ (Anodize / Seal)", tank_list, index=start_idx_ano, key="sb_ano_seal_v5")
-                selected_tank_info = tank_options[selected_tank_name]
-                tank_type = selected_tank_info['tank_type']
-                
-                st.info(f"ประเภทบ่อ: {tank_type}")
-
-                with st.form("form_ano_seal_dynamic", clear_on_submit=True):
-                    # อุณหภูมิ (มีทั้งคู่)
-                    temp_val = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
-                    
-                    # ตัวแปรเริ่มต้น
-                    ph_val = 0.0
-                    den_val = 0.0
-                    
-                    # ถ้าเป็น Anodize ให้โชว์ pH และ Density
-                    if tank_type == "Anodize":
-                        col_a, col_b = st.columns(2)
-                        ph_val = col_a.number_input("ค่า pH", step=0.01, format="%.2f")
-                        den_val = col_b.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
-                    else:
-                        st.write("ℹ️ บ่อประเภท Seal บันทึกเฉพาะค่าอุณหภูมิ")
-
-                    if st.form_submit_button("💾 บันทึกข้อมูล"):
-                        data_to_save = {
-                            "tank_id": selected_tank_info['tank_id'],
-                            "temperature": temp_val,
+                if st.form_submit_button("บันทึกข้อมูลอโนไดซ์"):
+                    try:
+                        supabase.table("anodize_tank_logs").insert({
+                            "tank_id": ano_tanks[sel_ano], 
+                            "ph_value": ph_a,
+                            "temperature": temp_a, 
+                            "density": den_a,
                             "recorded_at": datetime.now(ICT).isoformat()
-                        }
-                        if tank_type == "Anodize":
-                            data_to_save["ph_value"] = ph_val
-                            data_to_save["density"] = den_val
-                        
-                        supabase.table("anodize_tank_logs").insert(data_to_save).execute()
-                        st.success(f"บันทึกบ่อ {selected_tank_name} สำเร็จ")
+                        }).execute()
+                        st.success("✅ บันทึกข้อมูลอโนไดซ์สำเร็จ")
+                        time.sleep(1.5)
                         st.rerun()
-            else:
-                st.warning("ไม่พบข้อมูลบ่อในระบบ")
-        except Exception as e:
-            st.error(f"Error: {e}")
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาด: {e}")
 
     # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
     with tab_main[2]:
