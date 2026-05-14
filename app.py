@@ -626,7 +626,11 @@ if menu == "Dashboard":
                 height=600,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-
+            # 2. ลบเส้นแนวนอนของแกน pH (แกน Y หลัก)
+            fig_mixed.update_yaxes(showgrid=False, secondary_y=False)
+            
+            # 3. ลบเส้นแนวนอนของแกนอุณหภูมิ (แกน Y ที่สอง)
+            fig_mixed.update_yaxes(showgrid=False, secondary_y=True)
             st.plotly_chart(fig_mixed, use_container_width=True)
             
             with st.expander("📊 ดูข้อมูลตาราง"):
