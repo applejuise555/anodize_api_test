@@ -852,41 +852,70 @@ if menu == "บันทึกข้อมูลการผลิต":
                 st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
                 time.sleep(1)
                 st.rerun()
-    # --- Tab 2: บ่ออโนไดซ์ ---
+    # --- Tab 2: บ่ออโนไดซ์ & บ่อซีล (ปรับปรุงใหม่) ---
     with tab_main[1]:
-        ano_tanks = get_options("tanks", "tank_id", "tank_name", "tank_type", "Anodize")
-        
-        # กรณีคลิกบ่ออโนไดซ์ (เช่น AnodizedPPool1)
-        default_ano = None
-
-        if ano_tanks:
-            ano_list = list(ano_tanks.keys())
-            sel_ano = st.selectbox(
-                "ยืนยันบ่ออโนไดซ์",
-                ano_list,
-                index=0,
-                key="ano_select"
-            )
+        try:
+            # ดึงข้อมูลบ่อทั้งประเภท Anodize และ Seal มาแสดงใน Tab เดียวกัน
+            # สมมติว่าในฐานข้อมูล column tank_type มีค่าเป็น 'Anodize' และ 'Seal'
+            res_tanks = supabase.table("tanks").select("tank_id, tank_name, tank_type")\
+                .in_("tank_type", ["Anodize", "Seal"]).execute()
             
-            with st.form("ano_form", clear_on_submit=True):
-                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f")
-                temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
-                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
+            if res_tanks.data:
+                tank_options = {t['tank_name']: t for t in res_tanks.data}
+                tank_list = list(tank_options.keys())
                 
-                if st.form_submit_button("บันทึกข้อมูลอโนไดซ์"):
-                    try:
-                        supabase.table("anodize_tank_logs").insert({
-                            "tank_id": ano_tanks[sel_ano], 
-                            "ph_value": ph_a,
-                            "temperature": temp_a, 
-                            "density": den_a,
-                            "recorded_at": datetime.now(ICT).isoformat()
-                        }).execute()
-                        st.success("✅ บันทึกข้อมูลอโนไดซ์สำเร็จ")
-                        time.sleep(1.5)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาด: {e}")
+                # ตรวจสอบว่ามีการคลิกมาจากแผนผังหรือไม่
+                start_idx_ano = tank_list.index(clicked_tank) if clicked_tank in tank_list else 0
+                
+                selected_tank_name = st.selectbox("เลือกบ่อ (Anodize / Seal)", tank_list, index=start_idx_ano, key="sb_ano_seal_v5")
+                selected_tank_info = tank_options[selected_tank_name]
+                tank_type = selected_tank_info['tank_type'] # ดูว่าบ่อที่เลือกเป็นประเภทไหน
+                
+                # แสดงสถานะบ่อปัจจุบัน
+                st.info(f"ประเภทบ่อ: {tank_type}")
+
+                with st.form("form_ano_seal_dynamic", clear_on_submit=True):
+                    # --- ส่วนที่ 1: อุณหภูมิ (มีให้กรอกทั้งคู่) ---
+                    temp_val = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f", key="tp_ano_v5")
+                    
+                    # --- ส่วนที่ 2: pH และ Density (แสดงเฉพาะบ่อ Anodize) ---
+                    ph_val = 0.0
+                    den_val = 0.0
+                    
+                    if tank_type == "Anodize":
+                        col_a, col_b = st.columns(2)
+                        ph_val = col_a.number_input("ค่า pH", step=0.01, format="%.2f", key="ph_ano_v5")
+                        den_val = col_b.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f", key="dn_ano_v5")
+                    else:
+                        st.write("ℹ️ บ่อประเภท Seal บันทึกเฉพาะค่าอุณหภูมิ")
+
+                    if st.form_submit_button("💾 บันทึกข้อมูล"):
+                        try:
+                            # บันทึกลงตาราง anodize_tank_logs (ซึ่งรองรับทั้ง Anodize และ Seal)
+                            # หรือถ้าคุณมีตารางแยก สามารถปรับเงื่อนไข .insert() ได้ที่นี่
+                            data_to_save = {
+                                "tank_id": selected_tank_info['tank_id'],
+                                "temperature": temp_val,
+                                "recorded_at": datetime.now(ICT).isoformat()
+                            }
+                            
+                            # ถ้าเป็นอโนไดซ์ ให้เพิ่ม pH และ Density เข้าไปในข้อมูลที่จะบันทึก
+                            if tank_type == "Anodize":
+                                data_to_save["ph_value"] = ph_val
+                                data_to_save["density"] = den_val
+                            
+                            supabase.table("anodize_tank_logs").insert(data_to_save).execute()
+                            
+                            st.success(f"✅ บันทึกข้อมูลบ่อ {selected_tank_name} สำเร็จ")
+                            st.query_params.clear()
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"เกิดข้อผิดพลาด: {e}")
+            else:
+                st.warning("ไม่พบข้อมูลบ่อ Anodize หรือ Seal ในระบบ")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
     # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
     with tab_main[2]:
