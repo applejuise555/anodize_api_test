@@ -823,8 +823,8 @@ if menu == "บันทึกข้อมูลการผลิต":
         st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
     
     if st.session_state.get("open_tank_dialog") and clicked_tank_name:
-        st.session_state["open_tank_dialog"] = False
         tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks)
+
 
     tab_main = st.tabs(["ฟอร์มบันทึกบ่อที่เลือก", "งานจิ๊ก (Jig System)"])
 
@@ -860,15 +860,17 @@ if menu == "บันทึกข้อมูลการผลิต":
     
                 if st.form_submit_button("บันทึกค่า"):
                     supabase.table("color_tank_logs").insert({
-                        "tank_id": color_tanks[selected_tank_name],
+                        "tank_id": color_tanks[clicked_tank_name],
                         "ph_value": ph,
                         "temperature": temp,
                         "recorded_at": datetime.now(ICT).isoformat()
                     }).execute()
-    
+                
+                    st.session_state["open_tank_dialog"] = False
                     st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
                     time.sleep(1)
                     st.rerun()
+
     
         elif clicked_tank_name in chemical_tanks:
             sel_tank_name = clicked_tank_name
@@ -893,24 +895,26 @@ if menu == "บันทึกข้อมูลการผลิต":
                     den_val = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
     
                 if st.form_submit_button("💾 บันทึกข้อมูล"):
-                    try:
-                        payload = {
-                            "tank_id": chemical_tanks[sel_tank_name],
-                            "temperature": temp_val,
-                            "recorded_at": datetime.now(ICT).isoformat()
-                        }
-    
-                        if not is_sealer:
-                            payload["ph_value"] = ph_val
-                            payload["density"] = den_val
-                        else:
-                            payload["ph_value"] = 0.0
-                            payload["density"] = 0.0
-    
-                        supabase.table("anodize_tank_logs").insert(payload).execute()
-                        st.success(f"✅ บันทึกข้อมูลบ่อ {sel_tank_name} สำเร็จ")
-                        time.sleep(1.2)
-                        st.rerun()
+                    payload = {
+                        "tank_id": chemical_tanks[clicked_tank_name],
+                        "temperature": temp_val,
+                        "recorded_at": datetime.now(ICT).isoformat()
+                    }
+                
+                    if not is_sealer:
+                        payload["ph_value"] = ph_val
+                        payload["density"] = den_val
+                    else:
+                        payload["ph_value"] = 0.0
+                        payload["density"] = 0.0
+                
+                    supabase.table("anodize_tank_logs").insert(payload).execute()
+                
+                    st.session_state["open_tank_dialog"] = False
+                    st.success(f"✅ บันทึกข้อมูลบ่อ {clicked_tank_name} สำเร็จ")
+                    time.sleep(1)
+                    st.rerun()
+
     
                     except Exception as e:
                         st.error(f"เกิดข้อผิดพลาด: {e}")
