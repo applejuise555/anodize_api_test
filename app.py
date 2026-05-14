@@ -653,25 +653,22 @@ if menu == "Dashboard":
             ano_chart_df = ano_filtered.sort_values("recorded_at")
     
             # --- ส่วนแสดงผลกราฟรวม (Combined Chart) ---
+# --- ส่วนแสดงผลกราฟรวม (Combined Chart - แยก Row) ---
             if not ano_chart_df.empty:
                 is_seal = "seal" in selected_ano.lower()
-                fig_combined = make_subplots(specs=[[{"secondary_y": True}]])
-
-                # 1. อุณหภูมิ (Temperature) - Bar Chart
-                fig_combined.add_trace(
-                    go.Bar(
-                        x=ano_chart_df["recorded_at"],
-                        y=ano_chart_df["temperature"],
-                        name="Temperature (°C)",
-                        marker_color="rgba(59, 130, 246, 0.3)",
-                        offsetgroup=0,
-                        hovertemplate="%{y:.1f} °C"
-                    ),
-                    secondary_y=True,
+                
+                # สร้าง Subplots แบบ 2 แถว: แถว 1 (pH/Density), แถว 2 (Temp)
+                # ถ้าเป็นบ่อ Seal แถว 1 จะว่าง หรือจะปรับโชว์แค่แถวเดียวก็ได้
+                fig_combined = make_subplots(
+                    rows=2, cols=1, 
+                    shared_xaxes=True, 
+                    vertical_spacing=0.1,
+                    subplot_titles=(f"Trend: pH & Density" if not is_seal else "", "Trend: Temperature (°C)"),
+                    specs=[[{"secondary_y": True}], [{"secondary_y": False}]]
                 )
 
                 if not is_seal:
-                    # 2. pH - Line Chart
+                    # 1. pH - Line Chart (Row 1)
                     fig_combined.add_trace(
                         go.Scatter(
                             x=ano_chart_df["recorded_at"],
@@ -679,12 +676,11 @@ if menu == "Dashboard":
                             mode='lines+markers',
                             name='pH Value',
                             line=dict(color='#22c55e', width=3),
-                            marker=dict(size=8)
                         ),
-                        secondary_y=False,
+                        row=1, col=1, secondary_y=False,
                     )
 
-                    # 3. Density - Line Chart
+                    # 2. Density - Line Chart (Row 1 - แกน Y ที่สอง)
                     fig_combined.add_trace(
                         go.Scatter(
                             x=ano_chart_df["recorded_at"],
@@ -692,39 +688,49 @@ if menu == "Dashboard":
                             mode='lines+markers',
                             name='Density',
                             line=dict(color='#a855f7', width=2, dash='dot'),
-                            marker=dict(size=6)
                         ),
-                        secondary_y=True,
+                        row=1, col=1, secondary_y=True,
                     )
+                    
+                    # เพิ่ม Standard Range สำหรับ pH (แถว 1)
+                    fig_combined.add_hrect(y0=PH_ANO_MIN, y1=PH_ANO_MAX, fillcolor="green", opacity=0.05, line_width=0, row=1, col=1)
 
-                # Layout & Gridlines
+                # 3. อุณหภูมิ (Temperature) - Bar Chart (Row 2)
+                fig_combined.add_trace(
+                    go.Bar(
+                        x=ano_chart_df["recorded_at"],
+                        y=ano_chart_df["temperature"],
+                        name="Temperature (°C)",
+                        marker_color="rgba(59, 130, 246, 0.6)",
+                        hovertemplate="%{y:.1f} °C"
+                    ),
+                    row=2, col=1
+                )
+                
+                # เพิ่ม Standard Range สำหรับ Temp (แถว 2)
+                fig_combined.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.05, line_width=0, row=2, col=1)
+
+                # Layout & Remove Gridlines
                 fig_combined.update_layout(
-                    title=f"Trend Analysis: {selected_ano}",
-                    xaxis=dict(showgrid=False, title="Time"),
-                    yaxis=dict(
-                        title="<b>pH Value</b>" if not is_seal else "",
-                        showgrid=False,
-                        range=[0, 14] if not is_seal else [0, 1],
-                        visible=not is_seal
-                    ),
-                    yaxis2=dict(
-                        title="<b>Temperature (°C)</b>",
-                        showgrid=False,
-                        range=[0, 100],
-                        overlaying='y',
-                        side='right'
-                    ),
+                    height=700, # เพิ่มความสูงเพื่อให้เห็นทั้งสองกราฟชัดเจน
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
                     hovermode="x unified",
-                    height=500,
+                    showlegend=True,
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                 )
 
-                if not is_seal:
-                    fig_combined.add_hrect(y0=PH_ANO_MIN, y1=PH_ANO_MAX, fillcolor="green", opacity=0.05, line_width=0, secondary_y=False)
+                # ปิด Gridlines ทุกแกน
+                fig_combined.update_xaxes(showgrid=False)
+                fig_combined.update_yaxes(showgrid=False)
                 
-                fig_combined.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.05, line_width=0, secondary_y=True)
+                # ตั้งค่าช่วงของแกน pH (แถว 1)
+                if not is_seal:
+                    fig_combined.update_yaxes(title_text="pH", range=[0, 14], row=1, col=1, secondary_y=False)
+                    fig_combined.update_yaxes(title_text="Density", row=1, col=1, secondary_y=True)
+
+                # ตั้งค่าช่วงของแกน Temp (แถว 2)
+                fig_combined.update_yaxes(title_text="Temp (°C)", range=[0, 100], row=2, col=1)
 
                 st.plotly_chart(fig_combined, use_container_width=True)
 
