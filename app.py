@@ -589,30 +589,57 @@ if menu == "Dashboard":
             # กรองตามบ่อที่เลือก
             final_df = filtered_df[filtered_df["tank_name"].isin(selected_tanks)].sort_values("recorded_at")
             
-            g1, g2 = st.columns(2)
+            # --- สร้างกราฟผสม (Mixed Chart: Line + Bar) ---
+            fig_mixed = make_subplots(specs=[[{"secondary_y": True}]])
+
+            for t_name in selected_tanks:
+                t_data = final_df[final_df["tank_name"] == t_name]
+                
+                # 1. เพิ่มอุณหภูมิเป็นกราฟแท่ง (Bar) - แกน Y ขวา
+                fig_mixed.add_trace(
+                    go.Bar(
+                        x=t_data["recorded_at"], 
+                        y=t_data["temperature"],
+                        name=f"Temp: {t_name}",
+                        marker_opacity=0.4, # ปรับให้จางลงจะได้ไม่ทับเส้น
+                        hovertemplate="%{y:.1f} °C"
+                    ),
+                    secondary_y=True,
+                )
+
+                # 2. เพิ่มค่า pH เป็นกราฟเส้น (Line) - แกน Y ซ้าย
+                fig_mixed.add_trace(
+                    go.Scatter(
+                        x=t_data["recorded_at"], 
+                        y=t_data["ph_value"],
+                        mode='lines+markers',
+                        name=f"pH: {t_name}",
+                        line=dict(width=3),
+                        hovertemplate="%{y:.2f}"
+                    ),
+                    secondary_y=False,
+                )
             
-            with g1:
-                fig_ph = go.Figure()
-                for t_name in selected_tanks:
-                    t_data = final_df[final_df["tank_name"] == t_name]
-                    fig_ph.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["ph_value"], 
-                                              mode='lines+markers', name=f"pH: {t_name}"))
-                fig_ph.add_hrect(y0=PH_MIN, y1=PH_MAX, fillcolor="green", opacity=0.1, line_width=0)
-                fig_ph.update_layout(title="แนวโน้มค่า pH (เปรียบเทียบ)", xaxis_title="เวลา", yaxis_title="pH")
-                st.plotly_chart(fig_ph, use_container_width=True)
-                
-            with g2:
-                fig_temp = go.Figure()
-                for t_name in selected_tanks:
-                    t_data = final_df[final_df["tank_name"] == t_name]
-                    fig_temp.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["temperature"], 
-                                                mode='lines+markers', name=f"Temp: {t_name}"))
-                fig_temp.add_hrect(y0=TEMP_COLOR_MIN, y1=TEMP_COLOR_MAX, fillcolor="orange", opacity=0.1, line_width=0)
-                fig_temp.update_layout(title="แนวโน้มอุณหภูมิ (เปรียบเทียบ)", xaxis_title="เวลา", yaxis_title="°C")
-                st.plotly_chart(fig_temp, use_container_width=True)
-                
+            # ตั้งค่าแกน Y
+            fig_mixed.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14]) [cite: 207]
+            fig_mixed.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100]) [cite: 207]
+
+            # เพิ่มแถบสีมาตรฐาน (Standard Range)
+            fig_mixed.add_hrect(y0=PH_MIN, y1=PH_MAX, fillcolor="green", opacity=0.1, line_width=0, secondary_y=False) [cite: 217]
+            fig_mixed.add_hrect(y0=TEMP_COLOR_MIN, y1=TEMP_COLOR_MAX, fillcolor="orange", opacity=0.05, line_width=0, secondary_y=True) [cite: 219]
+
+            fig_mixed.update_layout(
+                title=f"การวิเคราะห์ค่า pH และอุณหภูมิแบบรวมแกน ({', '.join(selected_tanks)})",
+                xaxis_title="วัน-เวลาที่บันทึก",
+                hovermode="x unified",
+                height=600,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+
+            st.plotly_chart(fig_mixed, use_container_width=True)
+            
             with st.expander("📊 ดูข้อมูลตารางที่กรองแล้ว"):
-                st.dataframe(final_df[["recorded_at", "tank_name", "ph_value", "temperature"]].sort_values("recorded_at", ascending=False), use_container_width=True)
+                st.dataframe(final_df[["recorded_at", "tank_name", "ph_value", "temperature"]].sort_values("recorded_at", ascending=False), use_container_width=True) [cite: 220]
         else:
             st.warning("⚠️ ไม่พบข้อมูลในช่วงเวลาที่เลือก หรือยังไม่ได้เลือกบ่อ")
             tank_map = load_tanks()
