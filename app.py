@@ -759,53 +759,53 @@ if menu == "บันทึกข้อมูลการผลิต":
                 time.sleep(1)
                 st.rerun()
     # --- Tab 2: บ่ออโนไดซ์ & บ่อ Seal ---
-with tab_main[1]:
-    # ดึงรายชื่อบ่อทั้งประเภท Anodize และ Seal (สมมติว่าใน DB มี tank_type สองแบบนี้)
-    # หรือดึงมาทั้งหมดแล้วค่อยกรองในแอป
-    all_ano_seal_tanks = get_options("tanks", "tank_id", "tank_name") 
-    tank_list = list(all_ano_seal_tanks.keys())
+    with tab_main[1]:
+        # ดึงรายชื่อบ่อทั้งประเภท Anodize และ Seal (สมมติว่าใน DB มี tank_type สองแบบนี้)
+        # หรือดึงมาทั้งหมดแล้วค่อยกรองในแอป
+        all_ano_seal_tanks = get_options("tanks", "tank_id", "tank_name") 
+        tank_list = list(all_ano_seal_tanks.keys())
+        
+        sel_tank = st.selectbox(
+            "เลือกบ่อที่ต้องการบันทึก (Anodize / Seal)", 
+            tank_list, 
+            index=0, 
+            key="ano_seal_select"
+        )
     
-    sel_tank = st.selectbox(
-        "เลือกบ่อที่ต้องการบันทึก (Anodize / Seal)", 
-        tank_list, 
-        index=0, 
-        key="ano_seal_select"
-    )
-
-    # เงื่อนไขการแสดงผลช่องกรอกข้อมูล 
-    # ตรวจสอบชื่อบ่อ (หรือจะตรวจสอบจาก tank_type ใน DB ก็ได้ถ้ามีการเก็บไว้)
-    is_seal = "seal" in sel_tank.lower() or "hotseal" in sel_tank.lower()
-
-    with st.form("ano_seal_form", clear_on_submit=True):
-        # บ่อทั้งสองประเภทต้องเก็บ Temperature 
-        temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
-        
-        # ถ้าไม่ใช่บ่อ Seal (คือเป็นบ่อ Anodize) ให้แสดงช่อง pH และ Density เพิ่ม 
-        if not is_seal:
-            ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f")
-            den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
-        
-        if st.form_submit_button("บันทึกข้อมูล"):
-            try:
-                data_to_insert = {
-                    "tank_id": all_ano_seal_tanks[sel_tank],
-                    "temperature": temp_a,
-                    "recorded_at": datetime.now(ICT).isoformat()
-                }
-                
-                # ถ้าเป็นบ่อ Anodize ให้ใส่ค่า pH และ Density ลงไปด้วย 
-                if not is_seal:
-                    data_to_insert["ph_value"] = ph_a
-                    data_to_insert["density"] = den_a
-                
-                # บันทึกลงตาราง anodize_tank_logs (หรือแยกตารางตามความเหมาะสม) 
-                supabase.table("anodize_tank_logs").insert(data_to_insert).execute()
-                
-                st.success(f"✅ บันทึกข้อมูลบ่อ {sel_tank} สำเร็จ")
-                time.sleep(1.5)
-                st.rerun()
-            except Exception as e:
-                st.error(f"เกิดข้อผิดพลาด: {e}")
+        # เงื่อนไขการแสดงผลช่องกรอกข้อมูล 
+        # ตรวจสอบชื่อบ่อ (หรือจะตรวจสอบจาก tank_type ใน DB ก็ได้ถ้ามีการเก็บไว้)
+        is_seal = "seal" in sel_tank.lower() or "hotseal" in sel_tank.lower()
+    
+        with st.form("ano_seal_form", clear_on_submit=True):
+            # บ่อทั้งสองประเภทต้องเก็บ Temperature 
+            temp_a = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
+            
+            # ถ้าไม่ใช่บ่อ Seal (คือเป็นบ่อ Anodize) ให้แสดงช่อง pH และ Density เพิ่ม 
+            if not is_seal:
+                ph_a = st.number_input("ค่า pH", step=0.01, format="%.2f")
+                den_a = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
+            
+            if st.form_submit_button("บันทึกข้อมูล"):
+                try:
+                    data_to_insert = {
+                        "tank_id": all_ano_seal_tanks[sel_tank],
+                        "temperature": temp_a,
+                        "recorded_at": datetime.now(ICT).isoformat()
+                    }
+                    
+                    # ถ้าเป็นบ่อ Anodize ให้ใส่ค่า pH และ Density ลงไปด้วย 
+                    if not is_seal:
+                        data_to_insert["ph_value"] = ph_a
+                        data_to_insert["density"] = den_a
+                    
+                    # บันทึกลงตาราง anodize_tank_logs (หรือแยกตารางตามความเหมาะสม) 
+                    supabase.table("anodize_tank_logs").insert(data_to_insert).execute()
+                    
+                    st.success(f"✅ บันทึกข้อมูลบ่อ {sel_tank} สำเร็จ")
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาด: {e}")
     # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
     with tab_main[2]:
         sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
