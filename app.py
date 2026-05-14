@@ -543,103 +543,7 @@ if menu == "Dashboard":
             })
         st.dataframe(pd.DataFrame(alert_data), use_container_width=True)
 
-        # ================= INDIVIDUAL TANK VIEW =================
-        # ================= INDIVIDUAL TANK VIEW (MULTI-SELECT & TIME FILTER) =================
-    st.markdown("---")
-    st.subheader("🔍 วิเคราะห์ข้อมูลเชิงลึก (Multi-Tank Analysis)")
-    
-    if logs:
-        df_all = pd.DataFrame(logs)
-        df_all["recorded_at"] = pd.to_datetime(df_all["recorded_at"])
-        tank_map = load_tanks()
-        inv_tank_map = {v: k for k, v in tank_map.items()}
-        df_all["tank_name"] = df_all["tank_id"].map(inv_tank_map)
-        
-        # --- ส่วนที่ 1: ตัวเลือกช่วงเวลา ---
-        col_f1, col_f2, col_f3 = st.columns(3)
-        time_unit = col_f1.selectbox("เลือกมุมมองเวลา", ["รายวัน (ปฏิทิน)", "รายเดือน", "รายไตรมาส", "รายปี"])
-        
-        filtered_df = df_all.copy()
-        
-        if time_unit == "รายวัน (ปฏิทิน)":
-            selected_date = col_f2.date_input("เลือกวันที่", datetime.now(ICT))
-            filtered_df = df_all[df_all["recorded_at"].dt.date == selected_date]
-        elif time_unit == "รายเดือน":
-            month_list = df_all["recorded_at"].dt.strftime('%m/%Y').unique()
-            selected_month = col_f2.selectbox("เลือกเดือน/ปี", month_list)
-            filtered_df = df_all[df_all["recorded_at"].dt.strftime('%m/%Y') == selected_month]
-        elif time_unit == "รายไตรมาส":
-            year_val = col_f2.number_input("ปี (ค.ศ.)", value=datetime.now().year)
-            q_val = col_f3.selectbox("ไตรมาส", [1, 2, 3, 4])
-            start_q, end_q = get_quarter_range(year_val, q_val)
-            filtered_df = df_all[(df_all["recorded_at"] >= start_q) & (df_all["recorded_at"] <= end_q)]
-        elif time_unit == "รายปี":
-            year_list = sorted(df_all["recorded_at"].dt.year.unique(), reverse=True)
-            selected_year = col_f2.selectbox("เลือกปี", year_list)
-            filtered_df = df_all[df_all["recorded_at"].dt.year == selected_year]
-    
-        # --- ส่วนที่ 2: ตัวเลือกบ่อ (แสดง Multi-Select เสมอ) ---
-        available_tanks = sorted(df_all["tank_name"].unique())
-        selected_tanks = st.multiselect("เลือกบ่อที่ต้องการเปรียบเทียบ", available_tanks, default=available_tanks[:1])
-    
-        if not filtered_df.empty and selected_tanks:
-            final_df = filtered_df[filtered_df["tank_name"].isin(selected_tanks)].sort_values("recorded_at")
-            
-            # --- สร้างกราฟผสม (Mixed Chart) ---
-            fig_mixed = make_subplots(specs=[[{"secondary_y": True}]])
-
-            for t_name in selected_tanks:
-                t_data = final_df[final_df["tank_name"] == t_name]
-                
-                # 1. อุณหภูมิ = กราฟแท่ง (Bar) -> แกน Y ขวา
-                fig_mixed.add_trace(
-                    go.Bar(
-                        x=t_data["recorded_at"], 
-                        y=t_data["temperature"],
-                        name=f"Temp: {t_name}",
-                        marker_opacity=0.3, 
-                        hovertemplate="%{y:.1f} °C"
-                    ),
-                    secondary_y=True,
-                )
-
-                # 2. ค่า pH = กราฟเส้น (Line) -> แกน Y ซ้าย
-                fig_mixed.add_trace(
-                    go.Scatter(
-                        x=t_data["recorded_at"], 
-                        y=t_data["ph_value"],
-                        mode='lines+markers',
-                        name=f"pH: {t_name}",
-                        line=dict(width=3),
-                        hovertemplate="%{y:.2f}"
-                    ),
-                    secondary_y=False,
-                )
-            
-            # ตั้งค่าแกนและ Layout
-            fig_mixed.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14])
-            fig_mixed.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100])
-            
-            fig_mixed.update_layout(
-                title="วิเคราะห์แนวโน้มค่า pH (เส้น) และอุณหภูมิ (แท่ง)",
-                xaxis_title="เวลาที่บันทึก",
-                hovermode="x unified",
-                height=600,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            # 2. ลบเส้นแนวนอนของแกน pH (แกน Y หลัก)
-            fig_mixed.update_yaxes(showgrid=False, secondary_y=False)
-            
-            # 3. ลบเส้นแนวนอนของแกนอุณหภูมิ (แกน Y ที่สอง)
-            fig_mixed.update_yaxes(showgrid=False, secondary_y=True)
-            st.plotly_chart(fig_mixed, use_container_width=True)
-            
-            with st.expander("📊 ดูข้อมูลตาราง"):
-                st.dataframe(final_df.sort_values("recorded_at", ascending=False), use_container_width=True)
-        else:
-            st.info("ℹ️ ไม่พบข้อมูลในช่วงเวลาที่เลือก โปรดลองเปลี่ยนวันที่หรือเลือกบ่อใหม่")
-    
-        # ================= ANODIZE TREND ANALYSIS ================
+# ================= ANODIZE TREND ANALYSIS ================
         st.markdown("---")
         st.subheader("📈 วิเคราะห์แนวโน้มบ่ออโนไดซ์ (Anodize Detailed Trend)")
         logs_a = load_anodize_logs()
@@ -742,7 +646,24 @@ if menu == "Dashboard":
                 if not is_seal:
                     fig_combined.add_hrect(y0=PH_ANO_MIN, y1=PH_ANO_MAX, fillcolor="green", opacity=0.05, line_width=0, secondary_y=False)
                 
-                fig_combined.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.05, line_width=0, secondary_y
+                fig_combined.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.05, line_width=0, secondary_y=True)
+
+                st.plotly_chart(fig_combined, use_container_width=True)
+
+                with st.expander(f"📋 รายละเอียดข้อมูลบันทึก {selected_ano}"):
+                    cols_to_show = ["recorded_at", "temperature"]
+                    if not is_seal: cols_to_show += ["ph_value", "density"]
+                    log_display = ano_chart_df[cols_to_show].sort_values("recorded_at", ascending=False)
+                    st.dataframe(log_display, use_container_width=True)
+            else:
+                st.warning("ไม่พบข้อมูลบันทึกสำหรับบ่อนี้")
+        else:
+            st.info("ไม่มีข้อมูลในระบบ Anodize")
+    
+        try:
+            st_autorefresh(interval=10000, key="refresh")
+        except:
+            pass
 
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
