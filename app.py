@@ -357,23 +357,31 @@ def render_tank_map(selected_tank_name=None):
 
     <script>
     const selectedTank = "__SELECTED_TANK__";
-
+    
     function selectTank(tankName) {
-        const url = new URL(window.parent.location.href);
-        url.searchParams.set("tank", tankName);
-        window.parent.location.href = url.toString();
+        try {
+            window.parent.localStorage.setItem("selected_tank", tankName);
+            window.parent.localStorage.setItem("selected_tank_updated_at", Date.now().toString());
+        } catch (error) {
+            localStorage.setItem("selected_tank", tankName);
+            localStorage.setItem("selected_tank_updated_at", Date.now().toString());
+        }
+    
+        document.querySelectorAll(".tank[data-tank]").forEach((item) => {
+            item.classList.toggle("selected", item.dataset.tank === tankName);
+        });
     }
-
+    
     document.querySelectorAll(".tank[data-tank]").forEach((tank) => {
         tank.classList.add("clickable");
         tank.setAttribute("role", "button");
         tank.setAttribute("tabindex", "0");
         tank.title = "คลิกเพื่อกรอกข้อมูลบ่อ " + tank.dataset.tank;
-
+    
         if (tank.dataset.tank === selectedTank) {
             tank.classList.add("selected");
         }
-
+    
         tank.addEventListener("click", () => selectTank(tank.dataset.tank));
         tank.addEventListener("keydown", (event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -383,6 +391,7 @@ def render_tank_map(selected_tank_name=None):
         });
     });
     </script>
+
     """
 
     html = html.replace("__SELECTED_TANK__", selected_tank_name)
@@ -696,12 +705,17 @@ if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
     
         # ดึงค่า ID จากการคลิก
-    clicked_tank_name = st.query_params.get("tank") if hasattr(st, "query_params") else None
-
-    if isinstance(clicked_tank_name, list):
-        clicked_tank_name = clicked_tank_name[0] if clicked_tank_name else None
+    # อ่านชื่อบ่อที่คลิกจาก localStorage เพราะ Streamlit Cloud บล็อก iframe ไม่ให้เปลี่ยน URL
+    st_autorefresh(interval=1000, key="tank_click_poll")
+    
+    clicked_tank_name = streamlit_js_eval(
+        js_expressions="localStorage.getItem('selected_tank')",
+        key="selected_tank_reader",
+        want_output=True
+    )
     
     render_tank_map(clicked_tank_name)
+
     
     if clicked_tank_name:
         st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
@@ -768,11 +782,16 @@ if menu == "บันทึกข้อมูลการผลิต":
             st.warning("⚠️ ไม่พบข้อมูลบ่อที่ตรงเงื่อนไขในระบบ (กรุณาเช็คชื่อบ่อในตาราง tanks)")
         else:
             # 3. ส่วนเลือกบ่อ
+            chemical_tank_list = list(chemical_tanks.keys())
+            chemical_default_index = chemical_tank_list.index(clicked_tank_name) if clicked_tank_name in chemical_tank_list else 0
+            
             sel_tank_name = st.selectbox(
                 "เลือกบ่อสารเคมี",
-                options=list(chemical_tanks.keys()),
+                options=chemical_tank_list,
+                index=chemical_default_index,
                 key="chem_tank_select"
             )
+    
             
             # 4. เช็คว่าเป็นบ่อ Seal หรือไม่ (ถ้าใช่จะเก็บแค่ Temp)
             is_sealer = "sealer" in sel_tank_name.lower() or "seal" in sel_tank_name.lower()
