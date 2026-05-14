@@ -808,16 +808,23 @@ if menu == "บันทึกข้อมูลการผลิต":
                 
                 if st.form_submit_button("💾 บันทึกข้อมูล"):
                     try:
+                        # เตรียมข้อมูล
                         payload = {
                             "tank_id": chemical_tanks[sel_tank_name],
                             "temperature": temp_val,
-                            "ph_value": ph_val,   # จะเป็น None ถ้าเป็นบ่อ Seal
-                            "density": den_val,    # จะเป็น None ถ้าเป็นบ่อ Seal
                             "recorded_at": datetime.now(ICT).isoformat()
                         }
-    
-                        supabase.table("anodize_tank_logs").insert(payload).execute()
                         
+                        if not is_sealer:
+                            # กรณีบ่ออโนไดซ์ (มีค่าจริง)
+                            payload["ph_value"] = ph_val
+                            payload["density"] = den_val
+                        else:
+                            # กรณีบ่อ Seal (ส่งค่า 0 แทนเพื่อเลี่ยง Error NOT NULL)
+                            payload["ph_value"] = 0.0
+                            payload["density"] = 0.0
+                
+                        supabase.table("anodize_tank_logs").insert(payload).execute()
                         st.success(f"✅ บันทึกข้อมูลบ่อ {sel_tank_name} สำเร็จ")
                         time.sleep(1.2)
                         st.rerun()
