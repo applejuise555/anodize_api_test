@@ -706,7 +706,7 @@ if menu == "บันทึกข้อมูลการผลิต":
     
         # ดึงค่า ID จากการคลิก
     if "tank_read_round" not in st.session_state:
-    st.session_state["tank_read_round"] = 0
+        st.session_state["tank_read_round"] = 0
 
     if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
         st.session_state["tank_read_round"] += 1
