@@ -11,7 +11,7 @@ import streamlit as st
 from streamlit_javascript import st_javascript
 from streamlit_js_eval import streamlit_js_eval
 import streamlit.components.v1 as components
-
+import json
 
 # 1. ตั้งค่า Timezone (UTC +7)
 ICT = timezone(timedelta(hours=7))
@@ -359,12 +359,15 @@ def render_tank_map(selected_tank_name=None):
     const selectedTank = "__SELECTED_TANK__";
     
     function selectTank(tankName) {
+        const payload = JSON.stringify({
+            tank: tankName,
+            updatedAt: Date.now()
+        });
+    
         try {
-            window.parent.localStorage.setItem("selected_tank", tankName);
-            window.parent.localStorage.setItem("selected_tank_updated_at", Date.now().toString());
+            window.parent.localStorage.setItem("selected_tank_payload", payload);
         } catch (error) {
-            localStorage.setItem("selected_tank", tankName);
-            localStorage.setItem("selected_tank_updated_at", Date.now().toString());
+            localStorage.setItem("selected_tank_payload", payload);
         }
     
         document.querySelectorAll(".tank[data-tank]").forEach((item) => {
@@ -391,7 +394,6 @@ def render_tank_map(selected_tank_name=None):
         });
     });
     </script>
-
     """
 
     html = html.replace("__SELECTED_TANK__", selected_tank_name)
@@ -703,62 +705,70 @@ if menu == "Dashboard":
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
-    
-        # ดึงค่า ID จากการคลิก
+
     if "tank_read_round" not in st.session_state:
         st.session_state["tank_read_round"] = 0
 
     if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
         st.session_state["tank_read_round"] += 1
-    
-    clicked_tank_from_js = streamlit_js_eval(
-        js_expressions="localStorage.getItem('selected_tank')",
-        key=f"selected_tank_reader_{st.session_state['tank_read_round']}",
+
+    clicked_tank_payload = streamlit_js_eval(
+        js_expressions="localStorage.getItem('selected_tank_payload')",
+        key=f"selected_tank_payload_reader_{st.session_state['tank_read_round']}",
         want_output=True
     )
-    
-    if clicked_tank_from_js:
-        st.session_state["clicked_tank_name"] = clicked_tank_from_js
-    
+
+    if clicked_tank_payload:
+        try:
+            payload = json.loads(clicked_tank_payload)
+            if payload.get("tank"):
+                st.session_state["clicked_tank_name"] = payload["tank"]
+        except Exception:
+            pass
+
     clicked_tank_name = st.session_state.get("clicked_tank_name")
-    
+
     render_tank_map(clicked_tank_name)
-    
+
     if clicked_tank_name:
         st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
+    else:
+        st.info("กรุณาคลิกบ่อบนผัง แล้วกดโหลดบ่อที่คลิก")
 
 
-    tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่อชุบสารเคมี(Chemical Bath)", "งานจิ๊ก (Jig System)"])
 
+    tab_main = st.tabs(["ฟอร์มบันทึกบ่อที่เลือก", "งานจิ๊ก (Jig System)"])
 
     with tab_main[0]:
-        color_tanks = get_options(
-            "tanks",
-            "tank_id",
-            "tank_name",
-            "tank_type",
-            "Color"
-        )
-    
-        tank_list = list(color_tanks.keys())
+    color_tanks = get_options(
+        "tanks",
+        "tank_id",
+        "tank_name",
+        "tank_type",
+        "Color"
+    )
 
-        if clicked_tank_name in tank_list:
-            st.session_state["color_select"] = clicked_tank_name
-        
-        selected_tank_name = st.selectbox(
-            "ยืนยันบ่อสี",
-            tank_list,
-            key="color_select"
-        )
-        
+    all_tanks = get_options("tanks", "tank_id", "tank_name")
+
+    chemical_tanks = {
+        name: tid for name, tid in all_tanks.items()
+        if any(keyword in name.lower() for keyword in ["anodize", "almite", "sealer", "seal"])
+    }
+
+    if not clicked_tank_name:
+        st.info("กรุณาคลิกบ่อบนผัง แล้วกดโหลดบ่อที่คลิก")
+
+    elif clicked_tank_name in color_tanks:
+        selected_tank_name = clicked_tank_name
+
+        st.subheader(f"🎨 บันทึกข้อมูลบ่อสี: {selected_tank_name}")
         detected_color = TANK_COLOR_MAP.get(selected_tank_name, "Black")
         render_color_bar(detected_color)
-    
-        # 🔥 ฟอร์มกรอกข้อมูล
+
         with st.form("color_log_form", clear_on_submit=True):
             ph = st.number_input("ค่า pH", step=0.1, format="%.2f")
             temp = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
-    
+
             if st.form_submit_button("บันทึกค่า"):
                 supabase.table("color_tank_logs").insert({
                     "tank_id": color_tanks[selected_tank_name],
@@ -766,91 +776,64 @@ if menu == "บันทึกข้อมูลการผลิต":
                     "temperature": temp,
                     "recorded_at": datetime.now(ICT).isoformat()
                 }).execute()
-    
+
                 st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
                 time.sleep(1)
                 st.rerun()
-    
-    # --- Tab 2: บ่อสารเคมี (Anodize / Almite / Sealer) ---
-    with tab_main[1]:
-        st.subheader("🧪 บันทึกข้อมูลบ่อสารเคมี")
-        
-        # 1. ดึงข้อมูลบ่อทั้งหมดจาก DB
-        all_tanks = get_options("tanks", "tank_id", "tank_name")
-        
-        # 2. กรองเฉพาะบ่อที่ต้องการ: Anodize, Almite, Sealer
-        # ใช้ .lower() เพื่อให้ไม่สนตัวพิมพ์เล็กหรือใหญ่
-        chemical_tanks = {
-            name: tid for name, tid in all_tanks.items() 
-            if any(keyword in name.lower() for keyword in ["anodize", "almite", "sealer", "seal"])
-        }
-        
-        if not chemical_tanks:
-            st.warning("⚠️ ไม่พบข้อมูลบ่อที่ตรงเงื่อนไขในระบบ (กรุณาเช็คชื่อบ่อในตาราง tanks)")
-        else:
-            # 3. ส่วนเลือกบ่อ
-            chemical_tank_list = list(chemical_tanks.keys())
-            chemical_default_index = chemical_tank_list.index(clicked_tank_name) if clicked_tank_name in chemical_tank_list else 0
-            
-            sel_tank_name = st.selectbox(
-                "เลือกบ่อสารเคมี",
-                options=chemical_tank_list,
-                index=chemical_default_index,
-                key="chem_tank_select"
-            )
 
-    
-            
-            # 4. เช็คว่าเป็นบ่อ Seal หรือไม่ (ถ้าใช่จะเก็บแค่ Temp)
-            is_sealer = "sealer" in sel_tank_name.lower() or "seal" in sel_tank_name.lower()
-            
-            # แสดง Guide บอกผู้ใช้ว่าบ่อนี้ต้องกรอกอะไรบ้าง
-            if is_sealer:
-                st.info(f"💡 บ่อ {sel_tank_name}: บันทึกเฉพาะค่า **Temperature**")
-            else:
-                st.info(f"💡 บ่อ {sel_tank_name}: บันทึกค่า **Temp, pH และ Density**")
-    
-            # 5. ฟอร์มบันทึกข้อมูล
-            with st.form("chemical_log_form", clear_on_submit=True):
-                # ทุกบ่อต้องกรอก Temp
-                temp_val = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
-                
-                # ตัวแปรสำหรับค่าที่เหลือ
-                ph_val = None
-                den_val = None
-                
-                if not is_sealer:
-                    # ถ้าไม่ใช่บ่อ Seal (เช่น Anodize Tank 1) ให้โชว์ pH และ Density
-                    ph_val = st.number_input("ค่า pH", step=0.01, format="%.2f")
-                    den_val = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
-                
-                if st.form_submit_button("💾 บันทึกข้อมูล"):
-                    try:
-                        # เตรียมข้อมูล
-                        payload = {
-                            "tank_id": chemical_tanks[sel_tank_name],
-                            "temperature": temp_val,
-                            "recorded_at": datetime.now(ICT).isoformat()
-                        }
-                        
-                        if not is_sealer:
-                            # กรณีบ่ออโนไดซ์ (มีค่าจริง)
-                            payload["ph_value"] = ph_val
-                            payload["density"] = den_val
-                        else:
-                            # กรณีบ่อ Seal (ส่งค่า 0 แทนเพื่อเลี่ยง Error NOT NULL)
-                            payload["ph_value"] = 0.0
-                            payload["density"] = 0.0
-                
-                        supabase.table("anodize_tank_logs").insert(payload).execute()
-                        st.success(f"✅ บันทึกข้อมูลบ่อ {sel_tank_name} สำเร็จ")
-                        time.sleep(1.2)
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาด: {e}")
+    elif clicked_tank_name in chemical_tanks:
+        sel_tank_name = clicked_tank_name
+
+        st.subheader(f"🧪 บันทึกข้อมูลบ่อสารเคมี: {sel_tank_name}")
+
+        is_sealer = "sealer" in sel_tank_name.lower() or "seal" in sel_tank_name.lower()
+
+        if is_sealer:
+            st.info(f"💡 บ่อ {sel_tank_name}: บันทึกเฉพาะค่า **Temperature**")
+        else:
+            st.info(f"💡 บ่อ {sel_tank_name}: บันทึกค่า **Temp, pH และ Density**")
+
+        with st.form("chemical_log_form", clear_on_submit=True):
+            temp_val = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
+
+            ph_val = None
+            den_val = None
+
+            if not is_sealer:
+                ph_val = st.number_input("ค่า pH", step=0.01, format="%.2f")
+                den_val = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
+
+            if st.form_submit_button("💾 บันทึกข้อมูล"):
+                try:
+                    payload = {
+                        "tank_id": chemical_tanks[sel_tank_name],
+                        "temperature": temp_val,
+                        "recorded_at": datetime.now(ICT).isoformat()
+                    }
+
+                    if not is_sealer:
+                        payload["ph_value"] = ph_val
+                        payload["density"] = den_val
+                    else:
+                        payload["ph_value"] = 0.0
+                        payload["density"] = 0.0
+
+                    supabase.table("anodize_tank_logs").insert(payload).execute()
+                    st.success(f"✅ บันทึกข้อมูลบ่อ {sel_tank_name} สำเร็จ")
+                    time.sleep(1.2)
+                    st.rerun()
+
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาด: {e}")
+
+    else:
+        st.warning(
+            f"ไม่พบบ่อ `{clicked_tank_name}` ในฐานข้อมูล `tanks` "
+            "กรุณาเช็คชื่อ data-tank ให้ตรงกับ tank_name"
+        )
+
     # --- Tab หลัก 3: ระบบงานจิ๊ก (Jig System) ---
-    with tab_main[2]:
+    with tab_main[1]:
         sub_prod, sub_jig, sub_log = st.tabs(["📦 1. ลงทะเบียนสินค้า", "🛠️ 2. ลงทะเบียนจิ๊ก", "⚡ 3. บันทึกผลผลิต"])
 
         with sub_prod:
