@@ -533,7 +533,7 @@ if menu == "Dashboard":
         
             st.plotly_chart(fig, use_container_width=True)
 #**********************************************************************************************
-    st.subheader("🔍 วิเคราะห์ข้อมูลเชิงลึก (Multi-Tank Analysis)")
+    st.subheader("🔍 วิเคราะห์ข้อมูลบ่อสี(รายบ่อ)")
     
     if logs:
         df_all = pd.DataFrame(logs)
@@ -604,8 +604,8 @@ if menu == "Dashboard":
                 )
             
             # ตั้งค่าแกนและ Layout
-            fig_mixed.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14])
-            fig_mixed.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100])
+            fig_mixed.update_yaxes(title_text="<b>ค่า pH</b>",showgrid=False, secondary_y=False, range=[0, 14])
+            fig_mixed.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>",showgrid=False, secondary_y=True, range=[0, 100])
             
             fig_mixed.update_layout(
                 title="วิเคราะห์แนวโน้มค่า pH (เส้น) และอุณหภูมิ (แท่ง)",
