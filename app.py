@@ -523,7 +523,7 @@ if menu == "Dashboard":
                 ),
                 secondary_y=True,
             )
-            fig.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14], dtick=1, title_font=dict(color="#22c55e"), tickfont=dict(color="#22c55e"), gridcolor='rgba(34, 197, 94, 0.1)')
+            fig.update_yaxes(title_text="<b>ค่า pH</b>", secondary_y=False, range=[0, 14], dtick=1, title_font=dict(color="#22c55e"), tickfont=dict(color="#22c55e"), showgrid=False)
             fig.update_yaxes(title_text="<b>อุณหภูมิ (°C)</b>", secondary_y=True, range=[0, 100], title_font=dict(color="#3b82f6"), tickfont=dict(color="#3b82f6"), showgrid=False)
             fig.add_hline(y=PH_MIN, line_dash="dash", line_color="#166534", secondary_y=False)
             fig.add_hline(y=PH_MAX, line_dash="dash", line_color="#166534", secondary_y=False)
