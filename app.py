@@ -778,32 +778,31 @@ if menu == "บันทึกข้อมูลการผลิต":
 
     if "tank_read_round" not in st.session_state:
         st.session_state["tank_read_round"] = 0
-
+    
+    if "open_tank_dialog" not in st.session_state:
+        st.session_state["open_tank_dialog"] = False
+    
     if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
         st.session_state["tank_read_round"] += 1
-
-    clicked_tank_payload = streamlit_js_eval(
-        js_expressions="localStorage.getItem('selected_tank_payload')",
-        key=f"selected_tank_payload_reader_{st.session_state['tank_read_round']}",
+        st.session_state["open_tank_dialog"] = True
+    
+    clicked_tank_from_js = streamlit_js_eval(
+        js_expressions="localStorage.getItem('selected_tank')",
+        key=f"selected_tank_reader_{st.session_state['tank_read_round']}",
         want_output=True
     )
-
-    if clicked_tank_payload:
-        try:
-            payload = json.loads(clicked_tank_payload)
-            if payload.get("tank"):
-                st.session_state["clicked_tank_name"] = payload["tank"]
-        except Exception:
-            pass
-
+    
+    if clicked_tank_from_js:
+        st.session_state["clicked_tank_name"] = clicked_tank_from_js
+    
     clicked_tank_name = st.session_state.get("clicked_tank_name")
-
+    
     color_tanks = get_options(
-    "tanks",
-    "tank_id",
-    "tank_name",
-    "tank_type",
-    "Color"
+        "tanks",
+        "tank_id",
+        "tank_name",
+        "tank_type",
+        "Color"
     )
     
     all_tanks = get_options("tanks", "tank_id", "tank_name")
@@ -818,13 +817,9 @@ if menu == "บันทึกข้อมูลการผลิต":
     if clicked_tank_name:
         st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
     
-    if st.button("เปิดฟอร์มบันทึกบ่อที่เลือก", key="open_tank_dialog"):
-        if clicked_tank_name:
-            tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks)
-        else:
-            st.warning("กรุณาคลิกบ่อบนผังก่อน")
-
-
+    if st.session_state.get("open_tank_dialog") and clicked_tank_name:
+        st.session_state["open_tank_dialog"] = False
+        tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks)
 
     tab_main = st.tabs(["ฟอร์มบันทึกบ่อที่เลือก", "งานจิ๊ก (Jig System)"])
 
