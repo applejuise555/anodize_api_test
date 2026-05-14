@@ -643,6 +643,7 @@ if menu == "Dashboard":
         st.markdown("---")
         st.subheader("📈 วิเคราะห์แนวโน้มบ่ออโนไดซ์ (Anodize Detailed Trend)")
         logs_a = load_anodize_logs()
+        
         if logs_a:
             df_a = pd.DataFrame(logs_a)
             df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"])
@@ -656,123 +657,92 @@ if menu == "Dashboard":
             for _, row in latest_ano.iterrows():
                 alert_ano.append({
                     "Tank": row["tank_name"],
-                    "pH": f"{get_status_icon(row['ph_value'], PH_ANO_MIN, PH_ANO_MAX)} {row['ph_value']:.2f}",
+                    "pH": f"{get_status_icon(row['ph_value'], PH_ANO_MIN, PH_ANO_MAX)} {row['ph_value']:.2f}" if pd.notnull(row['ph_value']) else "-",
                     "Temp": f"{get_status_icon(row['temperature'], TEMP_ANO_MIN, TEMP_ANO_MAX)} {row['temperature']:.1f}",
-                    "Density": f"{get_status_icon(row['density'], DEN_ANO_MIN, DEN_ANO_MAX)} {row['density']:.3f}"
+                    "Density": f"{get_status_icon(row['density'], DEN_ANO_MIN, DEN_ANO_MAX)} {row['density']:.3f}" if pd.notnull(row['density']) else "-"
                 })
             st.dataframe(pd.DataFrame(alert_ano), use_container_width=True)
     
             available_ano_tanks = sorted(df_a["tank_name"].dropna().unique())
             selected_ano = st.selectbox("เลือกบ่ออโนไดซ์เพื่อดูแนวโน้ม", available_ano_tanks)
         
-        # กรองข้อมูลเฉพาะบ่อที่เลือก -> เรียงใหม่ -> เอา 10 แถวบนสุด (ล่าสุด)
-            ano_filtered = df_a[df_a["tank_name"] == selected_ano] \
-                            .sort_values("recorded_at", ascending=False) \
-                            .head(10)
-        
-        # เรียงกลับเป็น อดีต -> ปัจจุบัน เพื่อให้กราฟเดินจากซ้ายไปขวา
+            # กรองข้อมูลเฉพาะบ่อที่เลือก
+            ano_filtered = df_a[df_a["tank_name"] == selected_ano].sort_values("recorded_at", ascending=False).head(10)
             ano_chart_df = ano_filtered.sort_values("recorded_at")
     
             # --- ส่วนแสดงผลกราฟรวม (Combined Chart) ---
-        if not ano_chart_df.empty:
-            # เช็คว่าเป็นบ่อ Seal หรือไม่ (จากชื่อบ่อ)
-            is_seal = "seal" in selected_ano.lower()
+            if not ano_chart_df.empty:
+                is_seal = "seal" in selected_ano.lower()
+                fig_combined = make_subplots(specs=[[{"secondary_y": True}]])
 
-            # สร้าง Subplots แบบใช้แกน Y ร่วมกัน (แต่เดี๋ยวเราจะแยกแกน Y ออกไปด้านข้าง)
-            # ถ้าเป็นบ่อ Seal จะมีแค่ 1 แกนหลัก, ถ้า Anodize จะมี 3 แกน
-            fig_combined = make_subplots(specs=[[{"secondary_y": True}]])
-
-            # 1. อุณหภูมิ (Temperature) - ใช้กราฟแท่ง (Bar) เป็นพื้นหลังสำหรับทุกบ่อ
-            fig_combined.add_trace(
-                go.Bar(
-                    x=ano_chart_df["recorded_at"],
-                    y=ano_chart_df["temperature"],
-                    name="Temperature (°C)",
-                    marker_color="rgba(59, 130, 246, 0.3)", # สีฟ้าโปร่งแสง
-                    offsetgroup=0,
-                    hovertemplate="%{y:.1f} °C"
-                ),
-                secondary_y=True,
-            )
-
-            # ถ้าไม่ใช่บ่อ Seal ให้เพิ่ม pH และ Density
-            if not is_seal:
-                # 2. ค่า pH - กราฟเส้น (Line) - แกน Y หลัก (ซ้าย)
+                # 1. อุณหภูมิ (Temperature) - Bar Chart
                 fig_combined.add_trace(
-                    go.Scatter(
+                    go.Bar(
                         x=ano_chart_df["recorded_at"],
-                        y=ano_chart_df["ph_value"],
-                        mode='lines+markers',
-                        name='pH Value',
-                        line=dict(color='#22c55e', width=3),
-                        marker=dict(size=8)
+                        y=ano_chart_df["temperature"],
+                        name="Temperature (°C)",
+                        marker_color="rgba(59, 130, 246, 0.3)",
+                        offsetgroup=0,
+                        hovertemplate="%{y:.1f} °C"
                     ),
-                    secondary_y=False,
+                    secondary_y=True,
                 )
 
-                # 3. Density - กราฟเส้น (Line) - สร้างแกน Y ที่ 3 (เยื้องไปทางขวา)
-                fig_combined.add_trace(
-                    go.Scatter(
-                        x=ano_chart_df["recorded_at"],
-                        y=ano_chart_df["density"],
-                        mode='lines+markers',
-                        name='Density',
-                        line=dict(color='#a855f7', width=2, dash='dot'),
-                        marker=dict(size=6)
-                    ),
-                    secondary_y=True, # ใช้ฝั่งขวาร่วมกับ Temp หรือจะแยกแกนก็ได้
-                )
-
-            # --- การตั้งค่า Layout และลบ Gridlines ---
-            fig_combined.update_layout(
-                title=f"Trend Analysis: {selected_ano}",
-                xaxis=dict(showgrid=False, title="Time"),
-                yaxis=dict(
-                    title="<b>pH Value</b>" if not is_seal else "",
-                    showgrid=False,
-                    range=[0, 14] if not is_seal else [0, 1],
-                    visible=not is_seal # ซ่อนแกน pH ถ้าเป็นบ่อ Seal
-                ),
-                yaxis2=dict(
-                    title="<b>Temperature (°C)</b>",
-                    showgrid=False,
-                    range=[0, 100],
-                    overlaying='y',
-                    side='right'
-                ),
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                hovermode="x unified",
-                height=500,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-
-            # เพิ่ม Standard Range (H-Rect)
-            if not is_seal:
-                fig_combined.add_hrect(y0=PH_ANO_MIN, y1=PH_ANO_MAX, fillcolor="green", opacity=0.05, line_width=0, secondary_y=False)
-            
-            fig_combined.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.05, line_width=0, secondary_y=True)
-
-            st.plotly_chart(fig_combined, use_container_width=True)
-
-            # --- รายละเอียดข้อมูลด้านล่าง ---
-            with st.expander(f"📋 รายละเอียดข้อมูลบันทึก {selected_ano}"):
-                # เลือกคอลัมน์ที่จะโชว์ตามประเภทบ่อ
-                cols_to_show = ["recorded_at", "temperature"]
                 if not is_seal:
-                    cols_to_show += ["ph_value", "density"]
+                    # 2. pH - Line Chart
+                    fig_combined.add_trace(
+                        go.Scatter(
+                            x=ano_chart_df["recorded_at"],
+                            y=ano_chart_df["ph_value"],
+                            mode='lines+markers',
+                            name='pH Value',
+                            line=dict(color='#22c55e', width=3),
+                            marker=dict(size=8)
+                        ),
+                        secondary_y=False,
+                    )
+
+                    # 3. Density - Line Chart
+                    fig_combined.add_trace(
+                        go.Scatter(
+                            x=ano_chart_df["recorded_at"],
+                            y=ano_chart_df["density"],
+                            mode='lines+markers',
+                            name='Density',
+                            line=dict(color='#a855f7', width=2, dash='dot'),
+                            marker=dict(size=6)
+                        ),
+                        secondary_y=True,
+                    )
+
+                # Layout & Gridlines
+                fig_combined.update_layout(
+                    title=f"Trend Analysis: {selected_ano}",
+                    xaxis=dict(showgrid=False, title="Time"),
+                    yaxis=dict(
+                        title="<b>pH Value</b>" if not is_seal else "",
+                        showgrid=False,
+                        range=[0, 14] if not is_seal else [0, 1],
+                        visible=not is_seal
+                    ),
+                    yaxis2=dict(
+                        title="<b>Temperature (°C)</b>",
+                        showgrid=False,
+                        range=[0, 100],
+                        overlaying='y',
+                        side='right'
+                    ),
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    hovermode="x unified",
+                    height=500,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+
+                if not is_seal:
+                    fig_combined.add_hrect(y0=PH_ANO_MIN, y1=PH_ANO_MAX, fillcolor="green", opacity=0.05, line_width=0, secondary_y=False)
                 
-                log_display = ano_chart_df[cols_to_show].sort_values("recorded_at", ascending=False)
-                st.dataframe(log_display, use_container_width=True)
-            else:
-                st.warning("ไม่พบข้อมูลบันทึกสำหรับบ่อนี้")
-        else:
-            st.info("ไม่มีข้อมูลในระบบ Anodize")
-    
-        try:
-            st_autorefresh(interval=10000, key="refresh")
-        except:
-            pass
+                fig_combined.add_hrect(y0=TEMP_ANO_MIN, y1=TEMP_ANO_MAX, fillcolor="blue", opacity=0.05, line_width=0, secondary_y
 
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
