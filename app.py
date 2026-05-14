@@ -504,21 +504,18 @@ def show_data_editor():
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต", "🛠️ จัดการและแก้ไขข้อมูล"])
 
 # ================= DASHBOARD (FULL SYSTEM VIEW) =================
-# ================= DASHBOARD (FULL SYSTEM VIEW) =================
 if menu == "Dashboard":
     st.title("📊 Production Dashboard (System Overview)")
 
-    # ================= 1. ตัวเลือกช่วงเวลาส่วนกลาง (Global Filter) =================
-    # ย้ายมาไว้ด้านบนสุดเพื่อให้มีผลกับทุกกราฟ
+    # --- 1. Global Filter (Sidebar) ---
     st.sidebar.markdown("---")
     st.sidebar.subheader("📅 ตั้งค่าช่วงเวลา (Global Filter)")
     time_unit = st.sidebar.selectbox(
         "เลือกมุมมองเวลา", 
         ["รายวัน (ปฏิทิน)", "รายเดือน", "รายไตรมาส", "รายปี"],
-        help="ตัวเลือกนี้จะมีผลกับทุกกราฟ ยกเว้นกราฟเปรียบเทียบค่า pH ล่าสุดรายบ่อ"
+        help="มีผลกับกราฟแนวโน้มทั้งหมด"
     )
     
-    # ตัวแปรสำหรับเก็บช่วงเวลาเริ่มต้น/สิ้นสุด
     g_start_dt = None
     g_end_dt = None
 
@@ -546,126 +543,131 @@ if menu == "Dashboard":
         g_start_dt = datetime(selected_year, 1, 1).replace(tzinfo=ICT)
         g_end_dt = datetime(selected_year, 12, 31, 23, 59, 59).replace(tzinfo=ICT)
 
-    # ================= STANDARD =================
-    PH_MIN, PH_MAX = 5.0, 6.0
-    TEMP_COLOR_MIN, TEMP_COLOR_MAX = 30, 40
-    PH_ANO_MIN, PH_ANO_MAX = 1, 1.5
-    TEMP_ANO_MIN, TEMP_ANO_MAX = 18, 22
-    DEN_ANO_MIN, DEN_ANO_MAX = 0.5, 1.5
+    # --- Standard Values ---
+    STD = {
+        "COLOR_PH": [5.0, 6.0], "COLOR_TEMP": [30, 40],
+        "ANO_PH": [1.0, 1.5], "ANO_TEMP": [18, 22], "ANO_DEN": [0.5, 1.5],
+        "SEAL_TEMP": [90, 98]
+    }
 
-    # ================= CACHE & DATA LOADING =================
+    # --- Data Loading ---
     @st.cache_data(ttl=10)
-    def load_color_logs():
-        return supabase.table("color_tank_logs").select("*").order("recorded_at", desc=True).limit(500).execute().data
+    def load_all_logs():
+        c_logs = supabase.table("color_tank_logs").select("*").order("recorded_at", desc=True).limit(500).execute().data
+        a_logs = supabase.table("anodize_tank_logs").select("*").order("recorded_at", desc=True).limit(500).execute().data
+        tanks = get_options("tanks", "tank_id", "tank_name")
+        return c_logs, a_logs, tanks
 
-    @st.cache_data(ttl=10)
-    def load_anodize_logs():
-        return supabase.table("anodize_tank_logs").select("*").order("recorded_at", desc=True).limit(500).execute().data
+    c_logs, a_logs, tank_map = load_all_logs()
+    inv_tank_map = {v: k for k, v in tank_map.items()}
 
-    @st.cache_data(ttl=60)
-    def load_tanks():
-        return get_options("tanks", "tank_id", "tank_name")
+    # --- Helper: Alert Table ---
+    def show_alert_table(df, p_min, p_max, t_min, t_max, d_min=None, d_max=None):
+        alerts = []
+        for _, row in df.iterrows():
+            status = []
+            # Check pH
+            if "ph_value" in row:
+                if row["ph_value"] < p_min or row["ph_value"] > p_max: status.append("❌ pH Out")
+                elif row["ph_value"] <= p_min+0.2 or row["ph_value"] >= p_max-0.2: status.append("⚠️ pH Warning")
+            # Check Temp
+            if "temperature" in row:
+                if row["temperature"] < t_min or row["temperature"] > t_max: status.append("❌ Temp Out")
+                elif row["temperature"] <= t_min+2 or row["temperature"] >= t_max-2: status.append("⚠️ Temp Warning")
+            
+            if status:
+                alerts.append({"บ่อ": row["tank_name"], "สถานะ": ", ".join(status), "เวลาล่าสุด": row["recorded_at"].strftime('%H:%M')})
+        if alerts: st.table(pd.DataFrame(alerts))
+        else: st.success("✅ ทุกบ่ออยู่ในเกณฑ์มาตรฐาน")
 
-    # ================= KPI SECTION =================
-    col1, col2 = st.columns(2)
-    active_jigs_res = supabase.table("jig_status").select("jig_id, current_tank_id").eq("status_type", "In-Process").execute()
-    active_jigs_data = active_jigs_res.data if active_jigs_res.data else []
-    
-    production_count = len(active_jigs_data)
-    active_tanks_set = {item["current_tank_id"] for item in active_jigs_data if item["current_tank_id"] is not None}
-    active_tanks_count = len(active_tanks_set)
-
-    col1.metric("🟢 กำลังผลิต (จิ๊ก)", production_count)
-    col2.metric("🧪 บ่อที่กำลังใช้งาน", active_tanks_count)
-    st.markdown("---")
-
-    # --- 1. กราฟเปรียบเทียบค่า pH (ยกเว้นไม่ต้องเปลี่ยนตามเวลา - แสดงค่าล่าสุด) ---
+    # --- 1 & 2. Color Tanks (Latest & Alert) ---
     st.subheader("🎨 วิเคราะห์ข้อมูลบ่อสี (ล่าสุดรายบ่อ)")
-    logs = load_color_logs()
-    if logs:
-        df = pd.DataFrame(logs)
-        df["recorded_at"] = pd.to_datetime(df["recorded_at"])
-        tank_map = load_tanks()
-        inv_tank_map = {v: k for k, v in tank_map.items()}
-        df["tank_name"] = df["tank_id"].map(inv_tank_map)
-        
-        latest = df.drop_duplicates("tank_id").copy()
-        latest = latest.sort_values("tank_name") 
-        if not latest.empty:
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
-            fig.add_trace(go.Bar(x=latest["tank_name"], y=latest["ph_value"], name="ค่า pH", marker_color="#98FB98", text=latest["ph_value"], textposition='auto'), secondary_y=False)
-            fig.add_trace(go.Bar(x=latest["tank_name"], y=latest["temperature"], name="อุณหภูมิ", marker_color="#AFEEEE", text=latest["temperature"], textposition='auto'), secondary_y=True)
-            fig.update_layout(height=400, margin=dict(t=50), barmode="group")
-            st.plotly_chart(fig, use_container_width=True)
+    if c_logs:
+        df_c = pd.DataFrame(c_logs)
+        df_c["recorded_at"] = pd.to_datetime(df_c["recorded_at"]).dt.tz_convert(ICT)
+        df_c["tank_name"] = df_c["tank_id"].map(inv_tank_map)
+        latest_c = df_c.drop_duplicates("tank_id").sort_values("tank_name")
 
-    # --- 2. วิเคราะห์ข้อมูลบ่อสี (รายบ่อ) - กรองตามเวลา Global ---
-    st.markdown("---")
-    st.subheader("🔍 วิเคราะห์แนวโน้มบ่อสี (Color Tanks Trend)")
-    if logs:
-        # กรองข้อมูลตามช่วงเวลา Global
-        df_all = df.copy()
-        df_all["recorded_at_tz"] = df_all["recorded_at"].dt.tz_convert(ICT)
-        filtered_df = df_all[(df_all["recorded_at_tz"] >= g_start_dt) & (df_all["recorded_at_tz"] <= g_end_dt)]
-        
-        available_tanks = sorted(df_all["tank_name"].unique())
-        selected_tanks = st.multiselect("เลือกบ่อที่ต้องการเปรียบเทียบ", available_tanks, default=available_tanks[:1], key="color_trend_select")
-    
-        if not filtered_df.empty and selected_tanks:
-            final_df = filtered_df[filtered_df["tank_name"].isin(selected_tanks)].sort_values("recorded_at")
-            fig_mixed = make_subplots(specs=[[{"secondary_y": True}]])
-            for t_name in selected_tanks:
-                t_data = final_df[final_df["tank_name"] == t_name]
-                fig_mixed.add_trace(go.Bar(x=t_data["recorded_at"], y=t_data["temperature"], name=f"Temp: {t_name}", marker_opacity=0.3), secondary_y=True)
-                fig_mixed.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["ph_value"], mode='lines+markers', name=f"pH: {t_name}"), secondary_y=False)
-            fig_mixed.update_layout(title=f"แนวโน้มช่วง {time_unit}", height=500)
-            st.plotly_chart(fig_mixed, use_container_width=True)
-        else:
-            st.info(f"ℹ️ ไม่พบข้อมูลบ่อสีในช่วง {time_unit} ที่เลือก")
+        # Alert Table
+        with st.expander("🚨 ตารางแจ้งเตือนความเสี่ยง (บ่อสี)", expanded=True):
+            show_alert_table(latest_c, *STD["COLOR_PH"], *STD["COLOR_TEMP"])
 
-    # --- 3. วิเคราะห์แนวโน้มบ่อสารเคมี - กรองตามเวลา Global ---
+        # Grouped Bar Chart
+        fig1 = make_subplots(specs=[[{"secondary_y": True}]])
+        fig1.add_trace(go.Bar(x=latest_c["tank_name"], y=latest_c["ph_value"], name=f"pH (Std:{STD['COLOR_PH'][0]}-{STD['COLOR_PH'][1]})", 
+                             marker_color="#2ECC71", offsetgroup=1, text=latest_c["ph_value"], textposition='outside'), secondary_y=False)
+        fig1.add_trace(go.Bar(x=latest_c["tank_name"], y=latest_c["temperature"], name=f"Temp (Std:{STD['COLOR_TEMP'][0]}-{STD['COLOR_TEMP'][1]})", 
+                             marker_color="#3498DB", offsetgroup=2, text=latest_c["temperature"], textposition='outside'), secondary_y=True)
+        fig1.update_layout(height=450, barmode="group", showlegend=True, 
+                          yaxis=dict(title="pH Value", showgrid=False), yaxis2=dict(title="Temperature (°C)", showgrid=False))
+        st.plotly_chart(fig1, use_container_width=True)
+
+    # --- 3 & 4. Anodize/Seal Trend & Alert ---
     st.markdown("---")
-    st.subheader("📈 วิเคราะห์แนวโน้มบ่อสารเคมี (Anodize Tanks Trend)")
-    logs_a = load_anodize_logs()
-    if logs_a:
-        df_a = pd.DataFrame(logs_a)
-        df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"])
-        df_a["recorded_at_tz"] = df_a["recorded_at"].dt.tz_convert(ICT)
+    st.subheader("📈 วิเคราะห์แนวโน้มบ่ออโนไดซ์ / บ่อซีล")
+    if a_logs:
+        df_a = pd.DataFrame(a_logs)
+        df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"]).dt.tz_convert(ICT)
         df_a["tank_name"] = df_a["tank_id"].map(inv_tank_map)
         
-        # กรองข้อมูลตามช่วงเวลา Global
-        filtered_ano_df = df_a[(df_a["recorded_at_tz"] >= g_start_dt) & (df_a["recorded_at_tz"] <= g_end_dt)]
+        # Filter Global
+        f_df_a = df_a[(df_a["recorded_at"] >= g_start_dt) & (df_a["recorded_at"] <= g_end_dt)]
         
-        available_ano_tanks = sorted(df_a["tank_name"].dropna().unique())
-        selected_ano = st.selectbox("เลือกบ่อเพื่อดูแนวโน้ม", available_ano_tanks, key="ano_trend_select")
+        sel_ano = st.selectbox("เลือกบ่อ", sorted(df_a["tank_name"].dropna().unique()))
+        is_seal = "seal" in sel_ano.lower()
+        latest_a = df_a[df_a["tank_name"] == sel_ano].head(1)
+
+        # Alert Table
+        with st.expander(f"🚨 ตารางแจ้งเตือน ({sel_ano})", expanded=True):
+            if is_seal: show_alert_table(latest_a, 0, 14, *STD["SEAL_TEMP"])
+            else: show_alert_table(latest_a, *STD["ANO_PH"], *STD["ANO_TEMP"])
+
+        chart_df = f_df_a[f_df_a["tank_name"] == sel_ano].sort_values("recorded_at")
         
-        ano_chart_df = filtered_ano_df[filtered_ano_df["tank_name"] == selected_ano].sort_values("recorded_at")
-        
-        if not ano_chart_df.empty:
-            is_seal = "seal" in selected_ano.lower()
+        if not chart_df.empty:
             if is_seal:
-                fig_temp = go.Figure()
-                fig_temp.add_trace(go.Scatter(x=ano_chart_df["recorded_at"], y=ano_chart_df["temperature"], mode='lines+markers', name='Temp'))
-                fig_temp.update_layout(title=f"อุณหภูมิ {selected_ano} ({time_unit})", height=350)
-                st.plotly_chart(fig_temp, use_container_width=True)
+                fig_s = go.Figure()
+                fig_s.add_trace(go.Scatter(x=chart_df["recorded_at"], y=chart_df["temperature"], mode='lines+markers', name="Temp", line=dict(color="#E74C3C")))
+                # Standard Area
+                fig_s.add_hrect(y0=STD["SEAL_TEMP"][0], y1=STD["SEAL_TEMP"][1], fillcolor="green", opacity=0.1, line_width=0, annotation_text="Standard Range")
+                fig_s.update_layout(title=f"อุณหภูมิ {sel_ano}", yaxis=dict(showgrid=False))
+                st.plotly_chart(fig_s, use_container_width=True)
             else:
-                g1, g2, g3 = st.columns(3)
-                with g1:
-                    fig_ph = go.Figure()
-                    fig_ph.add_trace(go.Scatter(x=ano_chart_df["recorded_at"], y=ano_chart_df["ph_value"], mode='lines+markers', name='pH'))
-                    fig_ph.update_layout(title="แนวโน้ม pH", height=300)
-                    st.plotly_chart(fig_ph, use_container_width=True)
-                with g2:
-                    fig_temp = go.Figure()
-                    fig_temp.add_trace(go.Scatter(x=ano_chart_df["recorded_at"], y=ano_chart_df["temperature"], mode='lines+markers', name='Temp'))
-                    fig_temp.update_layout(title="อุณหภูมิ (°C)", height=300)
-                    st.plotly_chart(fig_temp, use_container_width=True)
-                with g3:
-                    fig_den = go.Figure()
-                    fig_den.add_trace(go.Scatter(x=ano_chart_df["recorded_at"], y=ano_chart_df["density"], mode='lines+markers', name='Density'))
-                    fig_den.update_layout(title="ความหนาแน่น", height=300)
-                    st.plotly_chart(fig_den, use_container_width=True)
+                c1, c2, c3 = st.columns(3)
+                # Helper for Mini Charts
+                def mini_chart(title, y_col, std_range, color):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=chart_df["recorded_at"], y=chart_df[y_col], mode='lines+markers', line=dict(color=color), name=y_col))
+                    fig.add_hrect(y0=std_range[0], y1=std_range[1], fillcolor="green", opacity=0.1, line_width=0)
+                    fig.update_layout(title=title, height=300, margin=dict(l=20, r=20, t=40, b=20), yaxis=dict(showgrid=False))
+                    return fig
+
+                c1.plotly_chart(mini_chart("pH Trend", "ph_value", STD["ANO_PH"], "#8E44AD"), use_container_width=True)
+                c2.plotly_chart(mini_chart("Temp Trend", "temperature", STD["ANO_TEMP"], "#D35400"), use_container_width=True)
+                c3.plotly_chart(mini_chart("Density Trend", "density", STD["ANO_DEN", [0.5, 1.5]], "#2C3E50"), use_container_width=True)
         else:
-            st.info(f"ℹ️ ไม่พบข้อมูลบ่อสารเคมีในช่วง {time_unit} ที่เลือก")
+            st.info("ไม่มีข้อมูลในช่วงเวลาที่เลือก")
+
+    # --- 5. Color Tank Mixed Trend ---
+    st.markdown("---")
+    st.subheader("🔍 เปรียบเทียบแนวโน้มบ่อสี (รายบ่อ)")
+    if c_logs:
+        f_df_c = df_c[(df_c["recorded_at"] >= g_start_dt) & (df_c["recorded_at"] <= g_end_dt)]
+        available_c = sorted(df_c["tank_name"].unique())
+        sel_tanks = st.multiselect("เลือกบ่อสี", available_c, default=available_c[:1])
+        
+        if sel_tanks and not f_df_c.empty:
+            fig_mix = make_subplots(specs=[[{"secondary_y": True}]])
+            # ใช้สีต่างกันในแต่ละบ่อและแต่ละค่า
+            colors = ["#1abc9c", "#3498db", "#9b59b6", "#f1c40f", "#e67e22"]
+            for i, t_name in enumerate(sel_tanks):
+                t_data = f_df_c[f_df_c["tank_name"] == t_name].sort_values("recorded_at")
+                clr = colors[i % len(colors)]
+                fig_mix.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["ph_value"], name=f"pH: {t_name}", line=dict(color=clr, dash='solid')), secondary_y=False)
+                fig_mix.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["temperature"], name=f"Temp: {t_name}", line=dict(color=clr, dash='dot')), secondary_y=True)
+            
+            fig_mix.update_layout(height=500, yaxis=dict(showgrid=False), yaxis2=dict(showgrid=False))
+            st.plotly_chart(fig_mix, use_container_width=True)
 
 # ================= RECORD PAGE =================
 if menu == "บันทึกข้อมูลการผลิต":
