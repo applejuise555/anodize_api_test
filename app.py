@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 import pandas as pd
 from supabase import create_client
 from datetime import datetime, timezone, timedelta
@@ -101,8 +101,7 @@ def get_quarter_range(year, quarter):
 
 import streamlit.components.v1 as components
 
-def render_tank_map(selected_tank_name=None):
-    selected_tank_name = selected_tank_name or ""
+def render_tank_map():
 
     html = """
     <style>
@@ -145,80 +144,63 @@ def render_tank_map(selected_tank_name=None):
         color:black !important;
     }
 
-    .tank.clickable{
-        cursor:pointer;
-        transition:transform .12s ease, box-shadow .12s ease, outline .12s ease;
-    }
-
-    .tank.clickable:hover{
-        transform:translateY(-2px);
-        box-shadow:0 8px 18px rgba(0,0,0,.25);
-        z-index:5;
-    }
-
-    .tank.selected{
-        outline:4px solid #ffeb3b;
-        box-shadow:0 0 0 3px rgba(0,0,0,.35), 0 10px 22px rgba(0,0,0,.35);
-        z-index:10;
-    }
-
     </style>
 
     <div class="plant-map">
 
         <!-- TOP ROW -->
 
-        <div class="tank" data-tank="5Black"
+        <div class="tank"
             style="left:0px;top:0px;width:80px;height:80px;background:#111;">
             5.Black
         </div>
 
-        <div class="tank" data-tank="2Red"
+        <div class="tank"
             style="left:140px;top:0px;width:70px;height:80px;background:red;">
             2.Red
         </div>
 
-        <div class="tank" data-tank="3Violet"
+        <div class="tank"
             style="left:210px;top:0px;width:60px;height:80px;background:purple;">
             3.Violet
         </div>
 
-        <div class="tank" data-tank="8Green"
+        <div class="tank"
             style="left:295px;top:0px;width:70px;height:80px;background:green;">
             8.Green
         </div>
 
-        <div class="tank" data-tank="17Black"
+        <div class="tank"
             style="left:365px;top:0px;width:65px;height:80px;background:#222;">
             17.Black
         </div>
 
-        <div class="tank" data-tank="15Gold"
+        <div class="tank"
             style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">
             15.Gold
         </div>
 
-        <div class="tank" data-tank="9Orange"
+        <div class="tank"
             style="left:525px;top:0px;width:65px;height:80px;background:orange;">
             9.Orange
         </div>
 
-        <div class="tank" data-tank="10LightBlue"
+        <div class="tank"
             style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">
             10.Light Blue
         </div>
 
-        <div class="tank" data-tank="6BananaLeafGreen"
+        <div class="tank"
             style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">
             6.Banana
         </div>
 
-        <div class="tank" data-tank="16Blue"
+        <div class="tank"
             style="left:785px;top:0px;width:70px;height:80px;background:blue;">
             16.Blue
         </div>
 
-        <div class="tank" data-tank="4DarkBlue"
+        <div class="tank"
             style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">
             4.Dark Blue
         </div>
@@ -242,68 +224,68 @@ def render_tank_map(selected_tank_name=None):
 
         <!-- CENTER -->
 
-        <div class="tank vertical" data-tank="AlmiteSealerLiquid"
+        <div class="tank vertical"
             style="left:0px;top:180px;width:60px;height:275px;background:#777;">
             AlmiteSealerLiquid
         </div>
 
-        <div class="tank" data-tank="20Black"
+        <div class="tank"
             style="left:270px;top:200px;width:80px;height:50px;background:#111;">
             20.Black
         </div>
 
-        <div class="tank" data-tank="1DarkRedA"
+        <div class="tank"
             style="left:270px;top:252px;width:80px;height:35px;background:darkred;">
             1.DarkRed
         </div>
 
-        <div class="tank vertical" data-tank="7Pink"
+        <div class="tank vertical"
             style="left:380px;top:210px;width:85px;height:130px;background:magenta;">
             7.Pink
         </div>
 
-        <div class="tank" data-tank="HotSealH60"
+        <div class="tank"
             style="left:540px;top:190px;width:85px;height:130px;background:#777;">
             HotSeal
         </div>
 
-        <div class="tank vertical" data-tank="11Gold"
+        <div class="tank vertical"
             style="left:540px;top:325px;width:85px;height:120px;background:#d4af00;color:black;">
             11.Gold
         </div>
 
         <!-- RIGHT -->
 
-        <div class="tank" data-tank="1DarkRedB"
+        <div class="tank"
             style="left:785px;top:200px;width:65px;height:55px;background:darkred;">
             1.DarkRed
         </div>
 
-        <div class="tank" data-tank="19Copper"
+        <div class="tank"
             style="left:785px;top:257px;width:65px;height:55px;background:#d9a27f;color:black;">
             19.Copper
         </div>
 
-        <div class="tank" data-tank="12Titanium"
+        <div class="tank"
             style="left:785px;top:314px;width:65px;height:55px;background:#777;">
             12.Titanium
         </div>
 
-        <div class="tank" data-tank="14RoseGold"
+        <div class="tank"
             style="left:785px;top:371px;width:65px;height:55px;background:plum;">
             14.RoseGold
         </div>
 
         <!-- ANODIZE -->
 
-        <div class="tank vertical" data-tank="AnodizedPPool1"
+        <div class="tank vertical"
             style="left:890px;top:520px;width:140px;height:190px;background:#ccc;color:black;">
             AnodizedPPool1
         </div>
 
         <!-- DARK TITANIUM -->
 
-        <div class="tank" data-tank="13DarkTitanium"
+        <div class="tank"
             style="left:310px;top:120px;width:80px;height:40px;background:#666;">
             13.DarkTitanium
         </div>
@@ -314,7 +296,7 @@ def render_tank_map(selected_tank_name=None):
         
         <!-- ORANGE OIL -->
         
-        <div class="tank" data-tank="18OrangeOil"
+        <div class="tank"
             style="left:625px;top:120px;width:80px;height:40px;background:#dd6600;">
             18.OrangeOil
         </div>
@@ -358,47 +340,10 @@ def render_tank_map(selected_tank_name=None):
         </div>
 
     </div>
-
-    <script>
-    const selectedTank = "__SELECTED_TANK__";
-
-    function selectTank(tankName) {
-        try {
-            window.parent.localStorage.setItem("selected_tank", tankName);
-            window.parent.localStorage.setItem("selected_tank_updated_at", Date.now().toString());
-        } catch (error) {
-            localStorage.setItem("selected_tank", tankName);
-            localStorage.setItem("selected_tank_updated_at", Date.now().toString());
-        }
-
-        document.querySelectorAll(".tank[data-tank]").forEach((item) => {
-            item.classList.toggle("selected", item.dataset.tank === tankName);
-        });
-    }
-
-    document.querySelectorAll(".tank[data-tank]").forEach((tank) => {
-        tank.classList.add("clickable");
-        tank.setAttribute("role", "button");
-        tank.setAttribute("tabindex", "0");
-        tank.title = "คลิกเพื่อกรอกข้อมูลบ่อ " + tank.dataset.tank;
-
-        if (tank.dataset.tank === selectedTank) {
-            tank.classList.add("selected");
-        }
-
-        tank.addEventListener("click", () => selectTank(tank.dataset.tank));
-        tank.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                selectTank(tank.dataset.tank);
-            }
-        });
-    });
-    </script>
     """
 
-    html = html.replace("__SELECTED_TANK__", selected_tank_name)
     components.html(html, height=750, scrolling=False)
+
 # ================= 3. EDIT DATA (ปรับให้โชว์ รหัส + ชื่อสินค้า) =================
 def show_data_editor():
     st.title("🛠️ จัดการและแก้ไขข้อมูลย้อนหลัง")
@@ -838,18 +783,7 @@ if menu == "บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
     
         # ดึงค่า ID จากการคลิก
-    # Read clicked tank from localStorage because Streamlit Cloud blocks iframe parent navigation
-    st_autorefresh(interval=800, key="tank_click_poll")
-    clicked_tank_name = streamlit_js_eval(
-        js_expressions="localStorage.getItem('selected_tank')",
-        key="selected_tank_reader",
-        want_output=True
-    )
-
-    render_tank_map(clicked_tank_name)
-    if clicked_tank_name:
-        st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
-
+    render_tank_map()
     tab_main = st.tabs(["บ่อสี (Color Bath)", "บ่อชุบสารเคมี(Chemical Bath)", "งานจิ๊ก (Jig System)"])
 
     with tab_main[0]:
@@ -863,11 +797,10 @@ if menu == "บันทึกข้อมูลการผลิต":
     
         tank_list = list(color_tanks.keys())
     
-        color_default_index = tank_list.index(clicked_tank_name) if clicked_tank_name in tank_list else 0
         selected_tank_name = st.selectbox(
             "ยืนยันบ่อสี",
             tank_list,
-            index=color_default_index,
+            index=0,
             key="color_select"
         )
     
@@ -909,12 +842,9 @@ if menu == "บันทึกข้อมูลการผลิต":
             st.warning("⚠️ ไม่พบข้อมูลบ่อที่ตรงเงื่อนไขในระบบ (กรุณาเช็คชื่อบ่อในตาราง tanks)")
         else:
             # 3. ส่วนเลือกบ่อ
-            chemical_tank_list = list(chemical_tanks.keys())
-            chemical_default_index = chemical_tank_list.index(clicked_tank_name) if clicked_tank_name in chemical_tank_list else 0
             sel_tank_name = st.selectbox(
                 "เลือกบ่อสารเคมี",
-                options=chemical_tank_list,
-                index=chemical_default_index,
+                options=list(chemical_tanks.keys()),
                 key="chem_tank_select"
             )
             
@@ -1163,7 +1093,7 @@ if menu == "บันทึกข้อมูลการผลิต":
                             else:
                                 if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
                                     supabase.table("jig_status").upsert({
-                                        "jig_id": jig_id, 
+                                        "jig_id": jig_id, ฤ
                                         "status_type": "Finished", 
                                         "current_tank_id": None, 
                                         "updated_at": datetime.now(ICT).isoformat()
