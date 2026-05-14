@@ -1093,7 +1093,7 @@ if menu == "บันทึกข้อมูลการผลิต":
                             else:
                                 if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
                                     supabase.table("jig_status").upsert({
-                                        "jig_id": jig_id, ฤ
+                                        "jig_id": jig_id, 
                                         "status_type": "Finished", 
                                         "current_tank_id": None, 
                                         "updated_at": datetime.now(ICT).isoformat()
