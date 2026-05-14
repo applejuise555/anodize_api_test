@@ -535,9 +535,13 @@ if menu == "Dashboard":
     elif time_unit == "รายไตรมาส":
         year_val = st.sidebar.number_input("ปี (ค.ศ.)", value=datetime.now().year, key="q_year")
         q_val = st.sidebar.selectbox("ไตรมาส", [1, 2, 3, 4])
-        s_date, e_date = get_quarter_range(year_val, q_val)
-        g_start_dt = s_date.replace(tzinfo=ICT)
-        g_end_dt = e_date.replace(tzinfo=ICT)
+        # ตรวจสอบว่ามีฟังก์ชัน get_quarter_range หรือไม่
+        try:
+            s_date, e_date = get_quarter_range(year_val, q_val)
+            g_start_dt = s_date.replace(tzinfo=ICT)
+            g_end_dt = e_date.replace(tzinfo=ICT)
+        except:
+            st.error("ไม่พบฟังก์ชันคำนวณไตรมาส")
     elif time_unit == "รายปี":
         selected_year = st.sidebar.number_input("เลือกปี (ค.ศ.)", value=datetime.now().year, key="y_year")
         g_start_dt = datetime(selected_year, 1, 1).replace(tzinfo=ICT)
@@ -552,35 +556,33 @@ if menu == "Dashboard":
 
     # --- Data Loading ---
     @st.cache_data(ttl=10)
-    def load_all_logs():
+    def load_dashboard_data():
         c_logs = supabase.table("color_tank_logs").select("*").order("recorded_at", desc=True).limit(500).execute().data
         a_logs = supabase.table("anodize_tank_logs").select("*").order("recorded_at", desc=True).limit(500).execute().data
         tanks = get_options("tanks", "tank_id", "tank_name")
         return c_logs, a_logs, tanks
 
-    c_logs, a_logs, tank_map = load_all_logs()
+    c_logs, a_logs, tank_map = load_dashboard_data()
     inv_tank_map = {v: k for k, v in tank_map.items()}
 
     # --- Helper: Alert Table ---
-    def show_alert_table(df, p_min, p_max, t_min, t_max, d_min=None, d_max=None):
+    def show_alert_table(df, p_min, p_max, t_min, t_max):
         alerts = []
         for _, row in df.iterrows():
             status = []
-            # Check pH
-            if "ph_value" in row:
+            if "ph_value" in row and pd.notnull(row["ph_value"]):
                 if row["ph_value"] < p_min or row["ph_value"] > p_max: status.append("❌ pH Out")
                 elif row["ph_value"] <= p_min+0.2 or row["ph_value"] >= p_max-0.2: status.append("⚠️ pH Warning")
-            # Check Temp
-            if "temperature" in row:
+            if "temperature" in row and pd.notnull(row["temperature"]):
                 if row["temperature"] < t_min or row["temperature"] > t_max: status.append("❌ Temp Out")
                 elif row["temperature"] <= t_min+2 or row["temperature"] >= t_max-2: status.append("⚠️ Temp Warning")
             
             if status:
-                alerts.append({"บ่อ": row["tank_name"], "สถานะ": ", ".join(status), "เวลาล่าสุด": row["recorded_at"].strftime('%H:%M')})
+                alerts.append({"บ่อ": row["tank_name"], "สถานะ": ", ".join(status), "เวลา": row["recorded_at"].strftime('%H:%M')})
         if alerts: st.table(pd.DataFrame(alerts))
-        else: st.success("✅ ทุกบ่ออยู่ในเกณฑ์มาตรฐาน")
+        else: st.success("✅ ทุกค่าอยู่ในเกณฑ์มาตรฐาน")
 
-    # --- 1 & 2. Color Tanks (Latest & Alert) ---
+    # --- 1 & 2. Color Tanks ---
     st.subheader("🎨 วิเคราะห์ข้อมูลบ่อสี (ล่าสุดรายบ่อ)")
     if c_logs:
         df_c = pd.DataFrame(c_logs)
@@ -588,21 +590,16 @@ if menu == "Dashboard":
         df_c["tank_name"] = df_c["tank_id"].map(inv_tank_map)
         latest_c = df_c.drop_duplicates("tank_id").sort_values("tank_name")
 
-        # Alert Table
         with st.expander("🚨 ตารางแจ้งเตือนความเสี่ยง (บ่อสี)", expanded=True):
             show_alert_table(latest_c, *STD["COLOR_PH"], *STD["COLOR_TEMP"])
 
-        # Grouped Bar Chart
         fig1 = make_subplots(specs=[[{"secondary_y": True}]])
-        fig1.add_trace(go.Bar(x=latest_c["tank_name"], y=latest_c["ph_value"], name=f"pH (Std:{STD['COLOR_PH'][0]}-{STD['COLOR_PH'][1]})", 
-                             marker_color="#2ECC71", offsetgroup=1, text=latest_c["ph_value"], textposition='outside'), secondary_y=False)
-        fig1.add_trace(go.Bar(x=latest_c["tank_name"], y=latest_c["temperature"], name=f"Temp (Std:{STD['COLOR_TEMP'][0]}-{STD['COLOR_TEMP'][1]})", 
-                             marker_color="#3498DB", offsetgroup=2, text=latest_c["temperature"], textposition='outside'), secondary_y=True)
-        fig1.update_layout(height=450, barmode="group", showlegend=True, 
-                          yaxis=dict(title="pH Value", showgrid=False), yaxis2=dict(title="Temperature (°C)", showgrid=False))
+        fig1.add_trace(go.Bar(x=latest_c["tank_name"], y=latest_c["ph_value"], name="pH", marker_color="#2ECC71", offsetgroup=1, text=latest_c["ph_value"], textposition='outside'), secondary_y=False)
+        fig1.add_trace(go.Bar(x=latest_c["tank_name"], y=latest_c["temperature"], name="Temp", marker_color="#3498DB", offsetgroup=2, text=latest_c["temperature"], textposition='outside'), secondary_y=True)
+        fig1.update_layout(height=400, barmode="group", yaxis=dict(showgrid=False), yaxis2=dict(showgrid=False))
         st.plotly_chart(fig1, use_container_width=True)
 
-    # --- 3 & 4. Anodize/Seal Trend & Alert ---
+    # --- 3 & 4. Anodize/Seal ---
     st.markdown("---")
     st.subheader("📈 วิเคราะห์แนวโน้มบ่ออโนไดซ์ / บ่อซีล")
     if a_logs:
@@ -610,45 +607,36 @@ if menu == "Dashboard":
         df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"]).dt.tz_convert(ICT)
         df_a["tank_name"] = df_a["tank_id"].map(inv_tank_map)
         
-        # Filter Global
         f_df_a = df_a[(df_a["recorded_at"] >= g_start_dt) & (df_a["recorded_at"] <= g_end_dt)]
-        
         sel_ano = st.selectbox("เลือกบ่อ", sorted(df_a["tank_name"].dropna().unique()))
         is_seal = "seal" in sel_ano.lower()
-        latest_a = df_a[df_a["tank_name"] == sel_ano].head(1)
-
-        # Alert Table
-        with st.expander(f"🚨 ตารางแจ้งเตือน ({sel_ano})", expanded=True):
-            if is_seal: show_alert_table(latest_a, 0, 14, *STD["SEAL_TEMP"])
-            else: show_alert_table(latest_a, *STD["ANO_PH"], *STD["ANO_TEMP"])
-
+        
         chart_df = f_df_a[f_df_a["tank_name"] == sel_ano].sort_values("recorded_at")
         
         if not chart_df.empty:
             if is_seal:
                 fig_s = go.Figure()
-                fig_s.add_trace(go.Scatter(x=chart_df["recorded_at"], y=chart_df["temperature"], mode='lines+markers', name="Temp", line=dict(color="#E74C3C")))
-                # Standard Area
-                fig_s.add_hrect(y0=STD["SEAL_TEMP"][0], y1=STD["SEAL_TEMP"][1], fillcolor="green", opacity=0.1, line_width=0, annotation_text="Standard Range")
+                fig_s.add_trace(go.Scatter(x=chart_df["recorded_at"], y=chart_df["temperature"], mode='lines+markers', line=dict(color="#E74C3C")))
+                fig_s.add_hrect(y0=STD["SEAL_TEMP"][0], y1=STD["SEAL_TEMP"][1], fillcolor="green", opacity=0.1, line_width=0)
                 fig_s.update_layout(title=f"อุณหภูมิ {sel_ano}", yaxis=dict(showgrid=False))
                 st.plotly_chart(fig_s, use_container_width=True)
             else:
                 c1, c2, c3 = st.columns(3)
-                # Helper for Mini Charts
                 def mini_chart(title, y_col, std_range, color):
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=chart_df["recorded_at"], y=chart_df[y_col], mode='lines+markers', line=dict(color=color), name=y_col))
+                    fig.add_trace(go.Scatter(x=chart_df["recorded_at"], y=chart_df[y_col], mode='lines+markers', line=dict(color=color)))
                     fig.add_hrect(y0=std_range[0], y1=std_range[1], fillcolor="green", opacity=0.1, line_width=0)
-                    fig.update_layout(title=title, height=300, margin=dict(l=20, r=20, t=40, b=20), yaxis=dict(showgrid=False))
+                    fig.update_layout(title=title, height=300, yaxis=dict(showgrid=False), margin=dict(l=20,r=20,t=40,b=20))
                     return fig
 
                 c1.plotly_chart(mini_chart("pH Trend", "ph_value", STD["ANO_PH"], "#8E44AD"), use_container_width=True)
                 c2.plotly_chart(mini_chart("Temp Trend", "temperature", STD["ANO_TEMP"], "#D35400"), use_container_width=True)
-                c3.plotly_chart(mini_chart("Density Trend", "density", STD["ANO_DEN", [0.5, 1.5]], "#2C3E50"), use_container_width=True)
+                # จุดที่เคย Error แก้ไขเป็น STD["ANO_DEN"]
+                c3.plotly_chart(mini_chart("Density Trend", "density", STD["ANO_DEN"], "#2C3E50"), use_container_width=True)
         else:
             st.info("ไม่มีข้อมูลในช่วงเวลาที่เลือก")
 
-    # --- 5. Color Tank Mixed Trend ---
+    # --- 5 & 6. Color Mixed Trend ---
     st.markdown("---")
     st.subheader("🔍 เปรียบเทียบแนวโน้มบ่อสี (รายบ่อ)")
     if c_logs:
@@ -658,14 +646,12 @@ if menu == "Dashboard":
         
         if sel_tanks and not f_df_c.empty:
             fig_mix = make_subplots(specs=[[{"secondary_y": True}]])
-            # ใช้สีต่างกันในแต่ละบ่อและแต่ละค่า
             colors = ["#1abc9c", "#3498db", "#9b59b6", "#f1c40f", "#e67e22"]
             for i, t_name in enumerate(sel_tanks):
                 t_data = f_df_c[f_df_c["tank_name"] == t_name].sort_values("recorded_at")
                 clr = colors[i % len(colors)]
-                fig_mix.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["ph_value"], name=f"pH: {t_name}", line=dict(color=clr, dash='solid')), secondary_y=False)
+                fig_mix.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["ph_value"], name=f"pH: {t_name}", line=dict(color=clr)), secondary_y=False)
                 fig_mix.add_trace(go.Scatter(x=t_data["recorded_at"], y=t_data["temperature"], name=f"Temp: {t_name}", line=dict(color=clr, dash='dot')), secondary_y=True)
-            
             fig_mix.update_layout(height=500, yaxis=dict(showgrid=False), yaxis2=dict(showgrid=False))
             st.plotly_chart(fig_mix, use_container_width=True)
 
