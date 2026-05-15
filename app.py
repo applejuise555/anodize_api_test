@@ -593,10 +593,17 @@ def show_data_editor():
                         st.error(f"ลบไม่ได้ อาจมี log อ้างอิงอยู่: {e}")
 
     with tab_jiglog:
+        # 1. กำหนดช่วงเวลาเริ่มและจบของวันที่เลือก (ISO Format สำหรับ timestamptz)
+        start_of_day = f"{filter_date_str}T00:00:00+07:00"
+        end_of_day = f"{filter_date_str}T23:59:59+07:00"
+
         st.subheader(f"⚡ รายการบันทึกจิ๊กของวันที่ {filter_date.strftime('%d/%m/%Y')}")
+        
+        # 2. แก้ไข Filter จาก .eq เป็น .gte และ .lte
         logs = supabase.table("jig_usage_log")\
             .select("*, products(product_code), jigs(jig_model_code)")\
-            .eq("recorded_date", filter_date_str)\
+            .gte("recorded_date", start_of_day)\
+            .lte("recorded_date", end_of_day)\
             .order("recorded_date", desc=True).execute().data or []
 
         if not logs:
@@ -604,10 +611,15 @@ def show_data_editor():
         else:
             log_map = {}
             for l in logs:
-                # ทำให้แสดงผลอ่านง่าย: [รหัสจิ๊ก] - [รหัสสินค้า]
+                # 3. ปรับการแสดงเวลาในรายการเลือกให้อ่านง่าย (เพราะเป็น timestamptz แล้ว)
+                dt_ict = datetime.fromisoformat(l.get('recorded_date').replace('Z', '+00:00')).astimezone(ICT)
+                time_str = dt_ict.strftime("%H:%M")
+                
                 j_code = l.get('jigs', {}).get('jig_model_code', 'N/A')
                 p_code = l.get('products', {}).get('product_code', 'N/A')
-                label = f"📦 จิ๊ก: {j_code} | สินค้า: {p_code}"
+                
+                # แสดงผลแบบ: ⏰ 08:30 | จิ๊ก: J101 | สินค้า: P202
+                label = f"⏰ {time_str} | จิ๊ก: {j_code} | สินค้า: {p_code}"
                 log_map[label] = l
             
             selected_label = st.selectbox("เลือกรายการที่ต้องการจัดการ", list(log_map.keys()), key="edit_jiglog_sel")
