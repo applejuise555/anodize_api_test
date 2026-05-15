@@ -568,7 +568,15 @@ def show_data_editor():
 
     with tab_product:
         st.subheader("📦 แก้ไข / ลบสินค้า")
-        products = supabase.table("products").select("*").order("product_code").execute().data or []
+        try:
+            products = supabase.table("products") \
+                .select("*") \
+                .order("product_code") \
+                .execute().data or []
+        
+        except Exception as e:
+            st.error(f"โหลดข้อมูลสินค้าไม่สำเร็จ: {e}")
+            products = []
 
         if not products:
             st.info("ยังไม่มีข้อมูลสินค้า")
