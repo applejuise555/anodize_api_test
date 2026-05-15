@@ -1396,7 +1396,8 @@ if menu == "บันทึกข้อมูลการผลิต":
     
     if "open_tank_dialog" not in st.session_state:
         st.session_state["open_tank_dialog"] = False
-    
+
+    open_dialog_now = False
     if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
         st.session_state["tank_read_round"] += 1
         st.session_state["open_tank_dialog"] = True
@@ -1437,7 +1438,7 @@ if menu == "บันทึกข้อมูลการผลิต":
     if clicked_tank_name:
         st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
     
-    if st.session_state.get("open_tank_dialog") and clicked_tank_name:
+    if open_dialog_now and clicked_tank_name:
         tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks)
 
 #====================================================================================
