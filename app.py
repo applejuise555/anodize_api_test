@@ -1403,13 +1403,14 @@ if menu == "บันทึกข้อมูลการผลิต":
         st.session_state["dialog_loaded"] = False
 
     open_dialog_now = False
+
     load_clicked = st.button(
         "โหลดบ่อที่คลิก",
         key="load_clicked_tank_btn"
     )
     
-    if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
-
+    if load_clicked:
+    
         st.session_state["tank_read_round"] += 1
     
         st.session_state["open_tank_dialog"] = True
