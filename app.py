@@ -846,7 +846,10 @@ if menu == "Dashboard":
 
     # --- 1. Global Filter (Sidebar) ---
     st.sidebar.subheader("📅 Filter Setting")
-    time_unit = st.sidebar.selectbox("มุมมองเวลา", ["รายวัน (ปฏิทิน)", "รายเดือน", "รายไตรมาส", "รายปี"])
+    time_unit = st.sidebar.selectbox(
+        "มุมมองเวลา",
+        ["รายวัน (เลือกหลายวัน)", "รายเดือน", "รายไตรมาส", "รายปี"]
+    )
     
     # *** แก้ NameError: ประกาศค่าเริ่มต้นไว้ก่อน ***
     now_ict = datetime.now(ICT)
@@ -945,7 +948,18 @@ if menu == "Dashboard":
         df_a = pd.DataFrame(a_logs)
         df_a["recorded_at"] = pd.to_datetime(df_a["recorded_at"]).dt.tz_convert(ICT)
         df_a["tank_name"] = df_a["tank_id"].map(inv_tank_map)
-        f_df_a = df_a[df_a["recorded_at"].dt.date.isin(selected_dates)]
+        if time_unit == "รายวัน (เลือกหลายวัน)":
+
+            f_df_a = df_a[
+                df_a["recorded_at"].dt.date.isin(selected_dates)
+            ]
+        
+        else:
+        
+            f_df_a = df_a[
+                (df_a["recorded_at"] >= g_start_dt) &
+                (df_a["recorded_at"] <= g_end_dt)
+            ]
         
         c_sel1, c_sel2 = st.columns([1, 3])
         with c_sel1:
@@ -983,7 +997,18 @@ if menu == "Dashboard":
         with c_m1:
             sel_tanks = st.multiselect("เลือกบ่อสี", sorted(df_c["tank_name"].unique()), default=sorted(df_c["tank_name"].unique())[:1])
         with c_m2:
-            f_df_c = df_c[df_c["recorded_at"].dt.date.isin(selected_dates)]
+            if time_unit == "รายวัน (เลือกหลายวัน)":
+
+                f_df_c = df_c[
+                    df_c["recorded_at"].dt.date.isin(selected_dates)
+                ]
+            
+            else:
+            
+                f_df_c = df_c[
+                    (df_c["recorded_at"] >= g_start_dt) &
+                    (df_c["recorded_at"] <= g_end_dt)
+                ]
             if not f_df_c.empty and sel_tanks:
                 fig_mix = make_subplots(specs=[[{"secondary_y": True}]])
                 # ===== พื้นที่มาตรฐาน pH =====
