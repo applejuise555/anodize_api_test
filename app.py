@@ -609,46 +609,76 @@ def show_data_editor():
         if not logs:
             st.warning(f"📅 ไม่มีข้อมูลบันทึกงานจิ๊กในวันที่ {filter_date}")
         else:
+            # 1. เตรียมข้อมูล Log ที่จะแก้ไข
             log_map = {}
             for l in logs:
-                # 3. ปรับการแสดงเวลาในรายการเลือกให้อ่านง่าย (เพราะเป็น timestamptz แล้ว)
                 dt_ict = datetime.fromisoformat(l.get('recorded_date').replace('Z', '+00:00')).astimezone(ICT)
                 time_str = dt_ict.strftime("%H:%M")
-                
                 j_code = l.get('jigs', {}).get('jig_model_code', 'N/A')
                 p_code = l.get('products', {}).get('product_code', 'N/A')
-                
-                # แสดงผลแบบ: ⏰ 08:30 | จิ๊ก: J101 | สินค้า: P202
-                label = f"⏰ {time_str} | จิ๊ก: {j_code} | สินค้า: {p_code}"
+                label = f"⏰ {time_str} | จิ๊ก: {j_code} | สินค้าเดิม: {p_code}"
                 log_map[label] = l
             
             selected_label = st.selectbox("เลือกรายการที่ต้องการจัดการ", list(log_map.keys()), key="edit_jiglog_sel")
             log = log_map[selected_label]
             id_col, id_val = get_pk(log, ["log_id", "id", "jig_usage_log_id"])
 
-            with st.form("edit_jiglog_form"):
-                pcs_per_row = st.number_input("จำนวนต่อแถว", min_value=0, value=int(log.get("pcs_per_row") or 0))
-                rows_filled = st.number_input("แถวที่เต็ม", min_value=0, value=int(log.get("rows_filled") or 0))
-                partial_pieces = st.number_input("เศษ", min_value=0, value=int(log.get("partial_pieces") or 0))
+            # 2. ดึงรายชื่อสินค้าทั้งหมด เพื่อใช้เป็นตัวเลือกใหม่
+            all_products = supabase.table("products").select("product_id, product_code, product_name").order("product_code").execute().data or []
+            prod_options = {f"{p['product_code']} | {p['product_name']}": p['product_id'] for p in all_products}
+            
+            # หาตำแหน่ง (index) ของสินค้าเดิมในลิสต์ใหม่ เพื่อให้ Selectbox เริ่มที่ค่าเดิม
+            current_prod_id = log.get('product_id')
+            current_index = 0
+            option_list = list(prod_options.keys())
+            for i, label in enumerate(option_list):
+                if prod_options[label] == current_prod_id:
+                    current_index = i
+                    break
+
+            # 3. ฟอร์มการแก้ไข
+            with st.form("edit_jiglog_form_v2"):
+                st.markdown("### 🔄 เปลี่ยนชิ้นงานและแก้ไขจำนวน")
+                
+                # แสดงชื่อสินค้าเดิมเพื่อให้อ้างอิงง่าย
+                old_p_code = log.get('products', {}).get('product_code', 'N/A')
+                old_p_name = log.get('products', {}).get('product_name', 'N/A')
+                st.text_input("ชิ้นงานเดิม (อ่านเท่านั้น)", value=f"{old_p_code} - {old_p_name}", disabled=True)
+                
+                # เลือกชิ้นงานใหม่
+                new_product_id = st.selectbox(
+                    "เลือกชิ้นงานใหม่ (หากต้องการเปลี่ยน)", 
+                    options=option_list, 
+                    index=current_index
+                )
+                selected_prod_id = prod_options[new_product_id]
+
+                col1, col2, col3 = st.columns(3)
+                pcs_per_row = col1.number_input("จำนวนต่อแถว", min_value=0, value=int(log.get("pcs_per_row") or 0))
+                rows_filled = col2.number_input("แถวที่เต็ม", min_value=0, value=int(log.get("rows_filled") or 0))
+                partial_pieces = col3.number_input("เศษ", min_value=0, value=int(log.get("partial_pieces") or 0))
+
                 total_pieces = (pcs_per_row * rows_filled) + partial_pieces
-                st.info(f"จำนวนรวมใหม่: {total_pieces}")
+                st.info(f"🔢 จำนวนรวมใหม่: {total_pieces} ชิ้น")
 
                 col_save, col_delete = st.columns(2)
-                if col_save.form_submit_button("💾 บันทึกงานจิ๊ก"):
+                
+                if col_save.form_submit_button("💾 บันทึกการเปลี่ยนแปลง"):
                     try:
                         update_row("jig_usage_log", id_col, id_val, {
+                            "product_id": selected_prod_id, # บันทึก ID ชิ้นงานใหม่ลงไป
                             "pcs_per_row": pcs_per_row,
                             "rows_filled": rows_filled,
                             "partial_pieces": partial_pieces,
                             "total_pieces": total_pieces
                         })
-                        st.success("บันทึกงานจิ๊กแล้ว")
+                        st.success("อัปเดตข้อมูลและเปลี่ยนชิ้นงานเรียบร้อยแล้ว!")
                         time.sleep(1)
                         st.rerun()
                     except Exception as e:
                         st.error(f"บันทึกไม่สำเร็จ: {e}")
 
-                if col_delete.form_submit_button("🗑️ ลบบันทึกงานจิ๊ก"):
+                if col_delete.form_submit_button("🗑️ ลบบันทึกนี้"):
                     try:
                         delete_row("jig_usage_log", id_col, id_val)
                         st.success("ลบบันทึกงานจิ๊กแล้ว")
