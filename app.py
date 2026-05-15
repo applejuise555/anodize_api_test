@@ -988,6 +988,8 @@ if menu == "Dashboard":
                 
                     # หา HEX จาก COLOR_HEX_MAP
                     clr = COLOR_HEX_MAP.get(color_name, "#666666")
+
+                    temp_clr = lighten_color(clr)
                 
                     # ===== pH =====
                     fig_mix.add_trace(
@@ -1008,7 +1010,7 @@ if menu == "Dashboard":
                         ),
                         secondary_y=False
                     )
-                    
+                
                     # ===== Temperature =====
                     fig_mix.add_trace(
                         go.Scatter(
@@ -1023,16 +1025,16 @@ if menu == "Dashboard":
                             ),
                             marker=dict(
                                 size=6,
-                                line=dict(width=1,color="white"),
+                                line=dict(width=1, color="white"),
                                 symbol="square",
-                                color=clr
+                                color=temp_clr
                             )
                         ),
                         secondary_y=True
                     )
                 
-                fig_mix.update_layout(
-                    height=300,
+                fig_mix.updatelayout(
+                    height=420,
                     margin=dict(l=5, r=5, t=10, b=5),
                     legend=dict(font_size=9),
                     yaxis_showgrid=False,
