@@ -1033,7 +1033,7 @@ if menu == "Dashboard":
                         secondary_y=True
                     )
                 
-                fig_mix.updatelayout(
+                fig_mix.update_layout(
                     height=420,
                     margin=dict(l=5, r=5, t=10, b=5),
                     legend=dict(font_size=9),
