@@ -741,101 +741,251 @@ def show_data_editor():
 
     with tab_color:
         st.subheader(f"🎨 บันทึกบ่อสีวันที่ {filter_date.strftime('%d/%m/%Y')}")
+    
         start_dt = f"{filter_date_str}T00:00:00"
         end_dt = f"{filter_date_str}T23:59:59"
-        
+    
         color_logs = supabase.table("color_tank_logs")\
             .select("*")\
-            .gte("recorded_at", start_dt).lte("recorded_at", end_dt)\
-            .order("recorded_at", desc=True).execute().data or []
-
+            .gte("recorded_at", start_dt)\
+            .lte("recorded_at", end_dt)\
+            .order("recorded_at", desc=True)\
+            .execute().data or []
+    
         if not color_logs:
             st.warning("📅 ไม่มีบันทึกบ่อสีในวันที่เลือก")
+    
         else:
-            log_map = {}
-            for l in color_logs:
-                # แปลงเวลา ISO เป็นเวลาไทย และโชว์เฉพาะ HH:mm
-                dt_ict = datetime.fromisoformat(l.get('recorded_at').replace('Z', '+00:00')).astimezone(ICT)
-                time_str = dt_ict.strftime("%H:%M") 
-                label = f"⏰ เวลา {time_str} น. | {l.get('tanks', {}).get('tank_name')}"
-                log_map[label] = l
-            
-            selected_label = st.selectbox("เลือกบันทึกบ่อสี", list(log_map.keys()), key="edit_color_sel")
-            log = log_map[selected_label]
-            id_col, id_val = get_pk(log, ["log_id", "id", "color_log_id"])
-
-            with st.form("edit_colorlog_form"):
-                ph_value = st.number_input("ค่า pH", step=0.1, format="%.2f", value=float(log.get("ph_value") or 0))
-                temperature = st.number_input("อุณหภูมิ", step=0.1, format="%.1f", value=float(log.get("temperature") or 0))
-
-                col_save, col_delete = st.columns(2)
-                if col_save.form_submit_button("💾 บันทึกบ่อสี"):
-                    try:
-                        update_row("color_tank_logs", id_col, id_val, {"ph_value": ph_value, "temperature": temperature})
-                        st.success("บันทึกข้อมูลบ่อสีแล้ว")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"บันทึกไม่สำเร็จ: {e}")
-
-                if col_delete.form_submit_button("🗑️ ลบบันทึกบ่อสี"):
-                    try:
-                        delete_row("color_tank_logs", id_col, id_val)
-                        st.success("ลบบันทึกบ่อสีแล้ว")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"ลบไม่สำเร็จ: {e}")
+            df_color = pd.DataFrame(color_logs)
+    
+            df_color["recorded_at"] = pd.to_datetime(df_color["recorded_at"])\
+                .dt.tz_convert(ICT)
+    
+            df_color["เวลา"] = df_color["recorded_at"].dt.strftime("%H:%M")
+    
+            # ===== เลือกบ่อ =====
+            tank_list = sorted(df_color["tank_name_snapshot"].dropna().unique())
+    
+            selected_tank = st.selectbox(
+                "เลือกบ่อสี",
+                tank_list,
+                key="color_tank_filter"
+            )
+    
+            tank_df = df_color[
+                df_color["tank_name_snapshot"] == selected_tank
+            ].copy()
+    
+            show_df = tank_df[[
+                "เวลา",
+                "ph_value",
+                "temperature"
+            ]].rename(columns={
+                "ph_value": "pH",
+                "temperature": "Temp"
+            })
+    
+            st.dataframe(
+                show_df,
+                use_container_width=True,
+                hide_index=True
+            )
+    
+            st.markdown("---")
+            st.subheader("✏️ แก้ไขข้อมูล")
+    
+            for idx, row in tank_df.iterrows():
+    
+                with st.expander(f"⏰ {row['เวลา']}"):
+    
+                    with st.form(f"edit_color_{idx}"):
+    
+                        ph_value = st.number_input(
+                            "pH",
+                            value=float(row["ph_value"] or 0),
+                            step=0.01,
+                            format="%.2f"
+                        )
+    
+                        temperature = st.number_input(
+                            "Temperature",
+                            value=float(row["temperature"] or 0),
+                            step=0.1,
+                            format="%.1f"
+                        )
+    
+                        col1, col2 = st.columns(2)
+    
+                        if col1.form_submit_button("💾 บันทึก"):
+    
+                            update_row(
+                                "color_tank_logs",
+                                "id",
+                                row["id"],
+                                {
+                                    "ph_value": ph_value,
+                                    "temperature": temperature
+                                }
+                            )
+    
+                            st.success("บันทึกสำเร็จ")
+                            time.sleep(1)
+                            st.rerun()
+    
+                        if col2.form_submit_button("🗑️ ลบ"):
+    
+                            delete_row(
+                                "color_tank_logs",
+                                "id",
+                                row["id"]
+                            )
+    
+                            st.success("ลบสำเร็จ")
+                            time.sleep(1)
+                            st.rerun()
 
     with tab_chemical:
+
         st.subheader(f"🧪 บันทึกบ่อสารเคมีวันที่ {filter_date.strftime('%d/%m/%Y')}")
+    
         start_dt = f"{filter_date_str}T00:00:00"
         end_dt = f"{filter_date_str}T23:59:59"
-
+    
         chem_logs = supabase.table("anodize_tank_logs")\
             .select("*, tanks(tank_name)")\
-            .gte("recorded_at", start_dt).lte("recorded_at", end_dt)\
-            .order("recorded_at", desc=True).execute().data or []
-
+            .gte("recorded_at", start_dt)\
+            .lte("recorded_at", end_dt)\
+            .order("recorded_at", desc=True)\
+            .execute().data or []
+    
         if not chem_logs:
-            st.warning("📅 ไม่มีบันทึกบ่อเคมีในวันที่เลือก")
+            st.warning("📅 ไม่มีบันทึกบ่อสารเคมี")
+    
         else:
-            log_map = {}
-            for l in chem_logs:
-                dt_ict = datetime.fromisoformat(l.get('recorded_at').replace('Z', '+00:00')).astimezone(ICT)
-                time_str = dt_ict.strftime("%H:%M")
-                label = f"⏰ เวลา {time_str} น. | {l.get('tanks', {}).get('tank_name')}"
-                log_map[label] = l
-            
-            selected_label = st.selectbox("เลือกบันทึกบ่อเคมี", list(log_map.keys()), key="edit_chem_sel")
-            log = log_map[selected_label]
-            id_col, id_val = get_pk(log, ["log_id", "id", "anodize_log_id"])
-
-            with st.form("edit_chemlog_form"):
-                temperature = st.number_input("อุณหภูมิ", step=0.1, format="%.1f", value=float(log.get("temperature") or 0))
-                ph_value = st.number_input("ค่า pH", step=0.01, format="%.2f", value=float(log.get("ph_value") or 0))
-                density = st.number_input("Density", step=0.001, format="%.3f", value=float(log.get("density") or 0))
-
-                col_save, col_delete = st.columns(2)
-                if col_save.form_submit_button("💾 บันทึกบ่อสารเคมี"):
-                    try:
-                        update_row("anodize_tank_logs", id_col, id_val, {
-                            "temperature": temperature, "ph_value": ph_value, "density": density
-                        })
-                        st.success("บันทึกข้อมูลบ่อสารเคมีแล้ว")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"บันทึกไม่สำเร็จ: {e}")
-
-                if col_delete.form_submit_button("🗑️ ลบบันทึกบ่อสารเคมี"):
-                    try:
-                        delete_row("anodize_tank_logs", id_col, id_val)
-                        st.success("ลบบันทึกบ่อสารเคมีแล้ว")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"ลบไม่สำเร็จ: {e}")
+    
+            df_chem = pd.DataFrame(chem_logs)
+    
+            df_chem["recorded_at"] = pd.to_datetime(df_chem["recorded_at"])\
+                .dt.tz_convert(ICT)
+    
+            df_chem["tank_name"] = df_chem["tanks"]\
+                .apply(lambda x: x.get("tank_name") if isinstance(x, dict) else "-")
+    
+            df_chem["เวลา"] = df_chem["recorded_at"].dt.strftime("%H:%M")
+    
+            # ===== เลือกบ่อ =====
+            chem_tanks = sorted(df_chem["tank_name"].dropna().unique())
+    
+            selected_chem = st.selectbox(
+                "เลือกบ่อสารเคมี",
+                chem_tanks,
+                key="chem_tank_filter"
+            )
+    
+            chem_df = df_chem[
+                df_chem["tank_name"] == selected_chem
+            ].copy()
+    
+            is_sealer = (
+                "seal" in selected_chem.lower()
+                or "sealer" in selected_chem.lower()
+            )
+    
+            # ===== ตาราง =====
+            if is_sealer:
+    
+                show_df = chem_df[[
+                    "เวลา",
+                    "temperature"
+                ]].rename(columns={
+                    "temperature": "Temp"
+                })
+    
+            else:
+    
+                show_df = chem_df[[
+                    "เวลา",
+                    "ph_value",
+                    "temperature",
+                    "density"
+                ]].rename(columns={
+                    "ph_value": "pH",
+                    "temperature": "Temp",
+                    "density": "Density"
+                })
+    
+            st.dataframe(
+                show_df,
+                use_container_width=True,
+                hide_index=True
+            )
+    
+            st.markdown("---")
+            st.subheader("✏️ แก้ไขข้อมูล")
+    
+            for idx, row in chem_df.iterrows():
+    
+                with st.expander(f"⏰ {row['เวลา']}"):
+    
+                    with st.form(f"edit_chem_{idx}"):
+    
+                        temperature = st.number_input(
+                            "Temperature",
+                            value=float(row["temperature"] or 0),
+                            step=0.1,
+                            format="%.1f"
+                        )
+    
+                        if not is_sealer:
+    
+                            ph_value = st.number_input(
+                                "pH",
+                                value=float(row["ph_value"] or 0),
+                                step=0.01,
+                                format="%.2f"
+                            )
+    
+                            density = st.number_input(
+                                "Density",
+                                value=float(row["density"] or 0),
+                                step=0.001,
+                                format="%.3f"
+                            )
+    
+                        col1, col2 = st.columns(2)
+    
+                        if col1.form_submit_button("💾 บันทึก"):
+    
+                            payload = {
+                                "temperature": temperature
+                            }
+    
+                            if not is_sealer:
+                                payload["ph_value"] = ph_value
+                                payload["density"] = density
+    
+                            update_row(
+                                "anodize_tank_logs",
+                                "id",
+                                row["id"],
+                                payload
+                            )
+    
+                            st.success("บันทึกสำเร็จ")
+                            time.sleep(1)
+                            st.rerun()
+    
+                        if col2.form_submit_button("🗑️ ลบ"):
+    
+                            delete_row(
+                                "anodize_tank_logs",
+                                "id",
+                                row["id"]
+                            )
+    
+                            st.success("ลบสำเร็จ")
+                            time.sleep(1)
+                            st.rerun()
 
 #=================================================================   
 menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต", "🛠️ จัดการและแก้ไขข้อมูล"])
