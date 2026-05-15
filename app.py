@@ -707,7 +707,7 @@ def show_data_editor():
         end_dt = f"{filter_date_str}T23:59:59"
         
         color_logs = supabase.table("color_tank_logs")\
-            .select("*")
+            .select("*")\
             .gte("recorded_at", start_dt).lte("recorded_at", end_dt)\
             .order("recorded_at", desc=True).execute().data or []
 
