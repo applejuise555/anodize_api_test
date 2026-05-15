@@ -60,12 +60,27 @@ def init_connection():
 supabase = init_connection()
 
 # --- Helper Functions ---
+def normalize_text(text):
+    return str(text).lower().replace(" ", "").replace("_", "")
+
 def get_hex_from_name(name):
-    sorted_colors = sorted(COLOR_HEX_MAP.keys(), key=len, reverse=True)
-    name_lower = str(name).lower()
+
+    name_clean = normalize_text(name)
+
+    # เรียงชื่อสีจากยาว -> สั้น
+    sorted_colors = sorted(
+        COLOR_HEX_MAP.keys(),
+        key=lambda x: len(normalize_text(x)),
+        reverse=True
+    )
+
     for color_name in sorted_colors:
-        if color_name.lower() in name_lower:
+
+        color_clean = normalize_text(color_name)
+
+        if color_clean in name_clean:
             return COLOR_HEX_MAP[color_name]
+
     return "#CCCCCC"
 
 def render_color_bar(name):
