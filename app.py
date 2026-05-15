@@ -615,7 +615,15 @@ def show_data_editor():
 
     with tab_jig:
         st.subheader("🛠️ แก้ไข / ลบจิ๊ก")
-        jigs = supabase.table("jigs").select("*").order("jig_model_code").execute().data or []
+        try:
+            jigs = supabase.table("jigs") \
+                .select("*") \
+                .order("jig_model_code") \
+                .execute().data or []
+        
+        except Exception as e:
+            st.error(f"โหลดข้อมูลจิ๊กไม่สำเร็จ: {e}")
+            jigs = []
 
         if not jigs:
             st.info("ยังไม่มีข้อมูลจิ๊ก")
