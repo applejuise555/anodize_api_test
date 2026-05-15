@@ -1398,33 +1398,44 @@ if menu == "บันทึกข้อมูลการผลิต":
         st.session_state["open_tank_dialog"] = False
     
     # ปุ่มโหลดบ่อที่คลิก
-    load_clicked = st.button("โหลดบ่อที่คลิก")
+    if "tank_read_round" not in st.session_state:
+        st.session_state["tank_read_round"] = 0
     
-    if load_clicked:
+    if "open_tank_dialog" not in st.session_state:
+        st.session_state["open_tank_dialog"] = False
     
-        # อ่าน localStorage ใหม่
-        st.session_state["tank_read_round"] += 1
+    # อ่านค่าจาก localStorage ตลอด
+    clicked_tank_payload = streamlit_js_eval(
+        js_expressions="localStorage.getItem('selected_tank_payload')",
+        key=f"selected_tank_payload_reader_{st.session_state['tank_read_round']}",
+        want_output=True
+    )
     
-        clicked_tank_payload = streamlit_js_eval(
-            js_expressions="localStorage.getItem('selected_tank_payload')",
-            key=f"selected_tank_payload_reader_{st.session_state['tank_read_round']}",
-            want_output=True
+    if clicked_tank_payload:
+        try:
+            payload = json.loads(clicked_tank_payload)
+    
+            if payload.get("tank"):
+                st.session_state["clicked_tank_name"] = payload["tank"]
+    
+        except Exception:
+            pass
+    
+    # ปุ่มโหลด
+    if st.button("โหลดบ่อที่คลิก"):
+    
+        st.session_state["open_tank_dialog"] = True
+        
+    clicked_tank_name = st.session_state.get("clicked_tank_name")
+    if st.session_state.get("open_tank_dialog") and clicked_tank_name:
+
+        tank_record_dialog(
+            clicked_tank_name,
+            color_tanks,
+            chemical_tanks
         )
     
-        if clicked_tank_payload:
-            try:
-                payload = json.loads(clicked_tank_payload)
-    
-                if payload.get("tank"):
-                    st.session_state["clicked_tank_name"] = payload["tank"]
-    
-                    # เปิด dialog เฉพาะตอนกดปุ่ม
-                    st.session_state["open_tank_dialog"] = True
-    
-            except Exception:
-                pass
-    
-    clicked_tank_name = st.session_state.get("clicked_tank_name")
+        st.session_state["open_tank_dialog"] = False
 
     color_tanks = get_options(
         "tanks",
