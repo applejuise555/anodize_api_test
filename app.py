@@ -60,27 +60,12 @@ def init_connection():
 supabase = init_connection()
 
 # --- Helper Functions ---
-def normalize_text(text):
-    return str(text).lower().replace(" ", "").replace("_", "")
-
 def get_hex_from_name(name):
-
-    name_clean = normalize_text(name)
-
-    # เรียงชื่อสีจากยาว -> สั้น
-    sorted_colors = sorted(
-        COLOR_HEX_MAP.keys(),
-        key=lambda x: len(normalize_text(x)),
-        reverse=True
-    )
-
+    sorted_colors = sorted(COLOR_HEX_MAP.keys(), key=len, reverse=True)
+    name_lower = str(name).lower()
     for color_name in sorted_colors:
-
-        color_clean = normalize_text(color_name)
-
-        if color_clean in name_clean:
+        if color_name.lower() in name_lower:
             return COLOR_HEX_MAP[color_name]
-
     return "#CCCCCC"
 
 def render_color_bar(name):
@@ -463,7 +448,7 @@ def render_tank_map(selected_tank_name=None):
     components.html(html, height=750, scrolling=True)
 
 #-----------------------------------------------------------------------
-
+@st.dialog("บันทึกข้อมูลบ่อ")
 def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
     if clicked_tank_name in color_tanks:
         st.subheader(f"🎨 บ่อสี: {clicked_tank_name}")
@@ -485,10 +470,9 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
             }).execute()
 
                 st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
+                st.session_state["open_tank_dialog"] = False
                 time.sleep(1)
                 st.rerun()
-                
-                
 
     elif clicked_tank_name in chemical_tanks:
         st.subheader(f"🧪 บ่อสารเคมี: {clicked_tank_name}")
@@ -527,9 +511,10 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
 
                 supabase.table("anodize_tank_logs").insert(payload).execute()
                 st.success(f"✅ บันทึกข้อมูลบ่อ {clicked_tank_name} สำเร็จ")
+                st.session_state["open_tank_dialog"] = False
                 time.sleep(1)
                 st.rerun()
-                
+
     else:
         st.warning(
             f"ไม่พบบ่อ `{clicked_tank_name}` ในฐานข้อมูล tanks "
@@ -1397,14 +1382,10 @@ if menu == "บันทึกข้อมูลการผลิต":
     if "open_tank_dialog" not in st.session_state:
         st.session_state["open_tank_dialog"] = False
     
-    # ปุ่มโหลดบ่อที่คลิก
-    if "tank_read_round" not in st.session_state:
-        st.session_state["tank_read_round"] = 0
+    if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
+        st.session_state["tank_read_round"] += 1
+        st.session_state["open_tank_dialog"] = True
     
-    if "open_tank_dialog" not in st.session_state:
-        st.session_state["open_tank_dialog"] = False
-    
-    # อ่านค่าจาก localStorage ตลอด
     clicked_tank_payload = streamlit_js_eval(
         js_expressions="localStorage.getItem('selected_tank_payload')",
         key=f"selected_tank_payload_reader_{st.session_state['tank_read_round']}",
@@ -1414,28 +1395,12 @@ if menu == "บันทึกข้อมูลการผลิต":
     if clicked_tank_payload:
         try:
             payload = json.loads(clicked_tank_payload)
-    
             if payload.get("tank"):
                 st.session_state["clicked_tank_name"] = payload["tank"]
-    
         except Exception:
             pass
     
-    # ปุ่มโหลด
-    if st.button("โหลดบ่อที่คลิก"):
-    
-        st.session_state["open_tank_dialog"] = True
-        
     clicked_tank_name = st.session_state.get("clicked_tank_name")
-    if st.session_state.get("open_tank_dialog") and clicked_tank_name:
-
-        tank_record_dialog(
-            clicked_tank_name,
-            color_tanks,
-            chemical_tanks
-        )
-    
-        st.session_state["open_tank_dialog"] = False
 
     color_tanks = get_options(
         "tanks",
@@ -1453,42 +1418,13 @@ if menu == "บันทึกข้อมูลการผลิต":
     }
     
     render_tank_map(clicked_tank_name)
-
+    
     if clicked_tank_name:
         st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
     
-    if (
-        st.session_state.get("open_tank_dialog")
-        and not st.session_state.get("dialog_loaded")
-        and clicked_tank_name
-    ):
-    
-        st.session_state["dialog_loaded"] = True
-    
-        if st.session_state.get("open_tank_dialog") and clicked_tank_name:
+    if st.session_state.get("open_tank_dialog") and clicked_tank_name:
+        tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks)
 
-            with st.container(border=True):
-        
-                col1, col2 = st.columns([10,1])
-        
-                with col1:
-                    st.subheader(f"📝 บันทึกข้อมูลบ่อ : {clicked_tank_name}")
-        
-                with col2:
-                    if st.button("❌", key="close_tank_form"):
-                        st.session_state["open_tank_dialog"] = False
-                        st.rerun()
-        
-                if st.session_state.get("open_tank_dialog") and clicked_tank_name:
-
-                    tank_record_dialog(
-                        clicked_tank_name,
-                        color_tanks,
-                        chemical_tanks
-                    )
-                
-                    # ปิดทันทีหลัง render
-                    st.session_state["open_tank_dialog"] = False
 #====================================================================================
     tab_main = st.tabs(["งานจิ๊ก (Jig System)"])
 
