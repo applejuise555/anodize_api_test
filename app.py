@@ -950,7 +950,7 @@ if menu == "Dashboard":
             st.warning(f"โหลด Tanks ไม่สำเร็จ: {e}")
             tanks = {}
 
-    return c_logs, a_logs, tanks
+        return c_logs, a_logs, tanks
 
     c_logs, a_logs, tank_map = load_dashboard_data()
     inv_tank_map = {v: k for k, v in tank_map.items()}
