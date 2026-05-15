@@ -946,8 +946,8 @@ if menu == "Dashboard":
                     x1=1,
                     y0=5,
                     y1=6,
-                    fillcolor="green",
-                    opacity=0.12,
+                    fillcolor="#22C55E",
+                    opacity=0.05,
                     layer="below",
                     line_width=0,
                 )
@@ -961,8 +961,8 @@ if menu == "Dashboard":
                     x1=1,
                     y0=30,
                     y1=40,
-                    fillcolor="orange",
-                    opacity=0.10,
+                    fillcolor="#F59E0B",
+                    opacity=0.04,
                     layer="below",
                     line_width=0,
                 )
@@ -1023,7 +1023,8 @@ if menu == "Dashboard":
                     legend=dict(font_size=9),
                     yaxis_showgrid=False,
                     yaxis2_showgrid=False,
-                    plot_bgcolor="white"
+                    plot_bgcolor="#F8FAFC",
+                    paper_bgcolor="#F8FAFC",
                 )
                 
                 fig_mix.update_yaxes(title_text="pH", secondary_y=False)
