@@ -19,24 +19,31 @@ st.set_page_config(page_title="Gissco Production Line and Dashboard", layout="wi
 
 # --- Configuration ---
 COLOR_HEX_MAP = {
-    "Black": "#000000", "Red": "#FF0000", "Dark Red": "#8B0000", 
-    "Violet": "#9400D3", "Green": "#008000", "Banana leaf Green": "#90EE90", 
-    "Gold": "#FFD700", "Orange": "#FFA500", "Light Blue": "#ADD8E6", 
-    "Blue": "#0000FF", "Dark Blue": "#00008B", "Pink": "#FFC0CB", 
-    "Copper": "#B87333", "Titanium": "#808080", "Dark Titanium": "#4A4E69", 
-    "Rose Gold": "#B76E79"
-}
+    # ===== COLOR TANK =====
+    "Black": "#1E1E1E",
+    "Red": "#DC2626",
+    "Dark Red": "#7F1D1D",
+    "Violet": "#7C3AED",
+    "Green": "#16A34A",
+    "Banana leaf Green": "#84CC16",
+    "Gold": "#EAB308",
+    "Orange": "#F97316",
+    "Light Blue": "#38BDF8",
+    "Blue": "#2563EB",
+    "Dark Blue": "#1D4ED8",
+    "Pink": "#EC4899",
+    "Copper": "#B45309",
+    "Titanium": "#6B7280",
+    "Dark Titanium": "#4B5563",
+    "Rose Gold": "#BE6D6D",
 
-TANK_COLOR_MAP = {
-    "4DarkBlue": "Dark Blue", "16Blue": "Blue", "1DarkRedA": "Dark Red",
-    "1DarkRedB": "Dark Red", "19Copper": "Copper", "12Titanium": "Titanium",
-    "13DarkTitanium": "Dark Titanium", "14RoseGold": "Rose Gold",
-    "6BananaLeafGreen": "Banana leaf Green", "10LightBlue": "Light Blue",
-    "18OrangeOil": "Orange", "9Orange": "Orange", "15Gold": "Gold",
-    "11Gold": "Gold", "17Black": "Black", "21Black": "Black",
-    "5Black": "Black", "20Black": "Black", "7Pink": "Pink",
-    "8Green": "Green", "3Violet": "Violet", "2Red": "Red",
-    "HotSealH60": "Black"
+    # ===== CHEMICAL =====
+    "Nitric": "#FDE68A",      # ส้มอ่อนจาง
+    "Sealer": "#94A3B8",      # เทาอมฟ้า
+    "Anodize": "#67E8F9",     # ฟ้า cyan อ่อน
+    "Sodium": "#FDE68A", 
+    # ===== UTILITY =====
+    "RO": "#F3F4F6",          # เทาจางเกือบขาว
 }
 
 # --- เชื่อมต่อ Supabase ---
@@ -121,6 +128,24 @@ def lighten_color(hex_color, factor=0.45):
 
     return f"rgb({r},{g},{b})"
 #=================================================================================
+@st.cache_data(ttl=60)
+def load_tank_color_map():
+    try:
+        rows = supabase.table("tanks") \
+            .select("tank_name, color_name") \
+            .execute().data or []
+
+        return {
+            row["tank_name"]: row["color_name"]
+            for row in rows
+        }
+
+    except Exception as e:
+        st.error(f"โหลดสีบ่อไม่สำเร็จ: {e}")
+        return {}
+
+tank_color_map = load_tank_color_map()
+#====================================================================================
 def render_tank_map(selected_tank_name=None):
     selected_tank_name = selected_tank_name or ""
 
@@ -428,7 +453,7 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
     if clicked_tank_name in color_tanks:
         st.subheader(f"🎨 บ่อสี: {clicked_tank_name}")
 
-        detected_color = TANK_COLOR_MAP.get(clicked_tank_name, "Black")
+        detected_color = tank_color_map.get(clicked_tank_name, "Gray")
         render_color_bar(detected_color)
 
         with st.form("dialog_color_log_form", clear_on_submit=True):
@@ -984,7 +1009,7 @@ if menu == "Dashboard":
                     t_data = f_df_c[f_df_c["tank_name"] == t_name].sort_values("recorded_at")
                 
                     # หา "ชื่อสีจริง"
-                    color_name = TANK_COLOR_MAP.get(t_name, "Black")
+                    color_name = tank_color_map.get(t_name, "Gray")
                 
                     # หา HEX จาก COLOR_HEX_MAP
                     clr = COLOR_HEX_MAP.get(color_name, "#666666")
@@ -1255,8 +1280,8 @@ if menu == "บันทึกข้อมูลการผลิต":
                         action = st.radio("การทำงาน", ["🔵 บันทึกงานต่อ", "🟢 เสร็จสิ้นงาน"], key="action_radio")
 
                         if action == "🔵 บันทึกงานต่อ":
-                            sel_c_new = st.selectbox("เลือกสี", sorted(set(TANK_COLOR_MAP.values())), key="sel_c_log")
-                            filtered_tanks = {n: i for n, i in color_tanks_all.items() if TANK_COLOR_MAP.get(n) == sel_c_new}
+                            sel_c_new = st.selectbox("เลือกสี", sorted(set(tank_color_map.values())), key="sel_c_log")
+                            filtered_tanks = {n: i for n, i in color_tanks_all.items() if tank_color_map.get(n) == sel_c_new}
                             if filtered_tanks:
                                 sel_tank_name = st.selectbox("เลือกบ่อสี", list(filtered_tanks.keys()), key="sel_t_log")
                                 with st.form("continue_form_fixed", clear_on_submit=True):
