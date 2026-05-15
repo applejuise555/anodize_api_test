@@ -485,7 +485,6 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
             }).execute()
 
                 st.success("✅ บันทึกข้อมูลบ่อสีสำเร็จ")
-                st.session_state["open_tank_dialog"] = False
                 time.sleep(1)
                 st.rerun()
 
@@ -526,7 +525,6 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
 
                 supabase.table("anodize_tank_logs").insert(payload).execute()
                 st.success(f"✅ บันทึกข้อมูลบ่อ {clicked_tank_name} สำเร็จ")
-                st.session_state["open_tank_dialog"] = False
                 time.sleep(1)
                 st.rerun()
 
@@ -1394,6 +1392,9 @@ if menu == "บันทึกข้อมูลการผลิต":
     if "tank_read_round" not in st.session_state:
         st.session_state["tank_read_round"] = 0
 
+    if "open_tank_dialog" not in st.session_state:
+        st.session_state["open_tank_dialog"] = False
+
     open_dialog_now = False
     if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
         st.session_state["tank_read_round"] += 1
@@ -1435,8 +1436,16 @@ if menu == "บันทึกข้อมูลการผลิต":
     if clicked_tank_name:
         st.success(f"เลือกบ่อจากผัง: {clicked_tank_name}")
     
-    if open_dialog_now and clicked_tank_name:
-        tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks)
+    if st.session_state.get("open_tank_dialog") and clicked_tank_name:
+
+        # รีเซ็ตก่อนเปิด dialog
+        st.session_state["open_tank_dialog"] = False
+    
+        tank_record_dialog(
+            clicked_tank_name,
+            color_tanks,
+            chemical_tanks
+        )
 
 #====================================================================================
     tab_main = st.tabs(["งานจิ๊ก (Jig System)"])
