@@ -858,12 +858,18 @@ if menu == "Dashboard":
 
     if time_unit == "รายวัน (เลือกหลายวัน)":
 
-        selected_dates = st.sidebar.multiselect(
-            "เลือกวันที่",
-            options=pd.date_range(
+        date_options = list(
+            pd.date_range(
                 now_ict.date() - timedelta(days=30),
                 now_ict.date()
-            ).date,
+            ).date
+        )
+        
+        date_options.reverse()
+        
+        selected_dates = st.sidebar.multiselect(
+            "เลือกวันที่",
+            options=date_options,
             default=[now_ict.date()]
         )
     
