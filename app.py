@@ -173,22 +173,17 @@ def tank_bg(tank_name):
 
     return get_hex_from_name(color_name)
 #====================================================================================
-def render_tank_map(selected_tank_name=None):
+# =====================================================================================
+def render_tank_map():
 
-    selected_tank_name = selected_tank_name or ""
+    selected_tank = st.session_state.get("selected_tank", "")
 
     html = f"""
     <style>
 
-    body{{
-        margin:0;
-        padding:0;
-    }}
-
-    .plant-map{{
+    .plant-map {{
         position:relative;
-        width:100%;
-        min-width:1100px;
+        width:1100px;
         height:720px;
         background:#e9e9e9;
         border:2px solid #999;
@@ -196,7 +191,7 @@ def render_tank_map(selected_tank_name=None):
         overflow:auto;
     }}
 
-    .tank{{
+    .tank {{
         position:absolute;
         color:white;
         font-weight:bold;
@@ -207,33 +202,28 @@ def render_tank_map(selected_tank_name=None):
         border:1px solid #555;
         box-sizing:border-box;
         font-family:Arial;
+        cursor:pointer;
+        transition:.15s;
     }}
 
-    .vertical{{
+    .tank:hover {{
+        transform:scale(1.03);
+        z-index:5;
+    }}
+
+    .selected {{
+        outline:4px solid yellow;
+        z-index:10;
+    }}
+
+    .vertical {{
         writing-mode:vertical-rl;
         text-orientation:mixed;
     }}
 
-    .ro{{
-        background:{get_hex_from_name("RO")} !important;
+    .ro {{
+        background:#d7ffff !important;
         color:black !important;
-    }}
-
-    .tank.clickable{{
-        cursor:pointer;
-        transition:transform .12s ease, box-shadow .12s ease;
-    }}
-
-    .tank.clickable:hover{{
-        transform:translateY(-2px);
-        box-shadow:0 8px 18px rgba(0,0,0,.25);
-        z-index:5;
-    }}
-
-    .tank.selected{{
-        outline:4px solid #ffeb3b;
-        box-shadow:0 0 0 3px rgba(0,0,0,.35);
-        z-index:10;
     }}
 
     </style>
@@ -242,315 +232,167 @@ def render_tank_map(selected_tank_name=None):
 
         <!-- TOP ROW -->
 
-        <div class="tank"
-            data-tank="5Black"
-            style="left:0px;top:0px;width:80px;height:80px;
-            background:{tank_bg('5Black')};">
+        <div class="tank" data-tank="5Black"
+            style="left:0px;top:0px;width:80px;height:80px;background:#111;">
             5.Black
         </div>
 
-        <div class="tank"
-            data-tank="2Red"
-            style="left:140px;top:0px;width:70px;height:80px;
-            background:{tank_bg('2Red')};">
+        <div class="tank" data-tank="2Red"
+            style="left:140px;top:0px;width:70px;height:80px;background:red;">
             2.Red
         </div>
 
-        <div class="tank"
-            data-tank="3Violet"
-            style="left:210px;top:0px;width:60px;height:80px;
-            background:{tank_bg('3Violet')};">
+        <div class="tank" data-tank="3Violet"
+            style="left:210px;top:0px;width:60px;height:80px;background:purple;">
             3.Violet
         </div>
 
-        <div class="tank"
-            data-tank="8Green"
-            style="left:295px;top:0px;width:70px;height:80px;
-            background:{tank_bg('8Green')};">
+        <div class="tank" data-tank="8Green"
+            style="left:295px;top:0px;width:70px;height:80px;background:green;">
             8.Green
         </div>
 
-        <div class="tank"
-            data-tank="17Black"
-            style="left:365px;top:0px;width:65px;height:80px;
-            background:{tank_bg('17Black')};">
+        <div class="tank" data-tank="17Black"
+            style="left:365px;top:0px;width:65px;height:80px;background:#222;">
             17.Black
         </div>
 
-        <div class="tank"
-            data-tank="15Gold"
-            style="left:455px;top:0px;width:70px;height:80px;
-            background:{tank_bg('15Gold')};
-            color:black;">
+        <div class="tank" data-tank="15Gold"
+            style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">
             15.Gold
         </div>
 
-        <div class="tank"
-            data-tank="9Orange"
-            style="left:525px;top:0px;width:65px;height:80px;
-            background:{tank_bg('9Orange')};">
+        <div class="tank" data-tank="9Orange"
+            style="left:525px;top:0px;width:65px;height:80px;background:orange;">
             9.Orange
         </div>
 
-        <div class="tank"
-            data-tank="10LightBlue"
-            style="left:620px;top:0px;width:70px;height:80px;
-            background:{tank_bg('10LightBlue')};
-            color:black;">
+        <div class="tank" data-tank="10LightBlue"
+            style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">
             10.Light Blue
         </div>
 
-        <div class="tank"
-            data-tank="6BananaLeafGreen"
-            style="left:690px;top:0px;width:70px;height:80px;
-            background:{tank_bg('6BananaLeafGreen')};
-            color:black;">
+        <div class="tank" data-tank="6BananaLeafGreen"
+            style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">
             6.Banana
         </div>
 
-        <div class="tank"
-            data-tank="16Blue"
-            style="left:785px;top:0px;width:70px;height:80px;
-            background:{tank_bg('16Blue')};">
+        <div class="tank" data-tank="16Blue"
+            style="left:785px;top:0px;width:70px;height:80px;background:blue;">
             16.Blue
         </div>
 
-        <div class="tank"
-            data-tank="4DarkBlue"
-            style="left:855px;top:0px;width:65px;height:80px;
-            background:{tank_bg('4DarkBlue')};">
+        <div class="tank" data-tank="4DarkBlue"
+            style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">
             4.Dark Blue
-        </div>
-
-        <!-- RO -->
-
-        <div class="tank ro"
-            style="left:140px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:455px;top:82px;width:130px;height:65px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:785px;top:82px;width:130px;height:65px;">
-            RO
         </div>
 
         <!-- CENTER -->
 
-        <div class="tank vertical"
-            data-tank="AlmiteSealer"
-            style="left:0px;top:180px;width:60px;height:275px;
-            background:{tank_bg('AlmiteSealer')};">
-            AlmiteSealerLiquid
+        <div class="tank vertical" data-tank="AlmiteSealer"
+            style="left:0px;top:180px;width:60px;height:275px;background:#777;">
+            AlmiteSealer
         </div>
 
-        <div class="tank"
-            data-tank="20Black"
-            style="left:270px;top:200px;width:80px;height:50px;
-            background:{tank_bg('20Black')};">
+        <div class="tank" data-tank="20Black"
+            style="left:270px;top:200px;width:80px;height:50px;background:#111;">
             20.Black
         </div>
 
-        <div class="tank"
-            data-tank="1DarkRedA"
-            style="left:270px;top:252px;width:80px;height:35px;
-            background:{tank_bg('1DarkRedA')};">
+        <div class="tank" data-tank="1DarkRedA"
+            style="left:270px;top:252px;width:80px;height:35px;background:darkred;">
             1.DarkRed
         </div>
 
-        <div class="tank vertical"
-            data-tank="7Pink"
-            style="left:380px;top:210px;width:85px;height:130px;
-            background:{tank_bg('7Pink')};">
+        <div class="tank vertical" data-tank="7Pink"
+            style="left:380px;top:210px;width:85px;height:130px;background:magenta;">
             7.Pink
         </div>
 
-        <div class="tank"
-            data-tank="HotSealH60"
-            style="left:540px;top:190px;width:85px;height:130px;
-            background:{tank_bg('HotSealH60')};">
+        <div class="tank" data-tank="HotSealH60"
+            style="left:540px;top:190px;width:85px;height:130px;background:#777;">
             HotSeal
         </div>
 
-        <div class="tank vertical"
-            data-tank="11Gold"
-            style="left:540px;top:325px;width:85px;height:120px;
-            background:{tank_bg('11Gold')};
-            color:black;">
+        <div class="tank vertical" data-tank="11Gold"
+            style="left:540px;top:325px;width:85px;height:120px;background:#d4af00;color:black;">
             11.Gold
         </div>
 
         <!-- RIGHT -->
 
-        <div class="tank"
-            data-tank="1DarkRedB"
-            style="left:785px;top:200px;width:65px;height:55px;
-            background:{tank_bg('1DarkRedB')};">
+        <div class="tank" data-tank="1DarkRedB"
+            style="left:785px;top:200px;width:65px;height:55px;background:darkred;">
             1.DarkRed
         </div>
 
-        <div class="tank"
-            data-tank="19Copper"
-            style="left:785px;top:257px;width:65px;height:55px;
-            background:{tank_bg('19Copper')};
-            color:black;">
+        <div class="tank" data-tank="19Copper"
+            style="left:785px;top:257px;width:65px;height:55px;background:#d9a27f;color:black;">
             19.Copper
         </div>
 
-        <div class="tank"
-            data-tank="12Titanium"
-            style="left:785px;top:314px;width:65px;height:55px;
-            background:{tank_bg('12Titanium')};">
+        <div class="tank" data-tank="12Titanium"
+            style="left:785px;top:314px;width:65px;height:55px;background:#777;">
             12.Titanium
         </div>
 
-        <div class="tank"
-            data-tank="14RoseGold"
-            style="left:785px;top:371px;width:65px;height:55px;
-            background:{tank_bg('14RoseGold')};">
+        <div class="tank" data-tank="14RoseGold"
+            style="left:785px;top:371px;width:65px;height:55px;background:plum;">
             14.RoseGold
         </div>
 
         <!-- ANODIZE -->
 
-        <div class="tank vertical"
-            data-tank="Anodize Tank 1"
-            style="left:890px;top:520px;width:140px;height:190px;
-            background:{tank_bg('Anodize Tank 1')};
-            color:black;">
-            AnodizedPool1
-        </div>
-
-        <!-- DARK TITANIUM -->
-
-        <div class="tank"
-            data-tank="13DarkTitanium"
-            style="left:310px;top:120px;width:80px;height:40px;
-            background:{tank_bg('13DarkTitanium')};">
-            13.DarkTitanium
-        </div>
-
-        <div class="tank"
-            style="left:390px;top:120px;width:80px;height:40px;
-            background:{tank_bg('13DarkTitanium')};">
-        </div>
-
-        <!-- ORANGE OIL -->
-
-        <div class="tank"
-            data-tank="18OrangeOil"
-            style="left:625px;top:120px;width:80px;height:40px;
-            background:{tank_bg('18OrangeOil')};">
-            18.OrangeOil
-        </div>
-
-        <div class="tank"
-            style="left:705px;top:120px;width:80px;height:40px;
-            background:{tank_bg('18OrangeOil')};">
-        </div>
-
-        <!-- RO CENTER -->
-
-        <div class="tank ro"
-            style="left:380px;top:355px;width:85px;height:90px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:625px;top:190px;width:90px;height:125px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:625px;top:320px;width:90px;height:125px;">
-            RO
-        </div>
-
-        <!-- RO RIGHT -->
-
-        <div class="tank ro"
-            style="left:850px;top:200px;width:85px;height:110px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:850px;top:312px;width:85px;height:114px;">
-            RO
-        </div>
-
-        <div class="tank ro"
-            style="left:990px;top:215px;width:85px;height:80px;">
-            RO
+        <div class="tank vertical" data-tank="Anodize Tank 1"
+            style="left:890px;top:520px;width:140px;height:190px;background:#ccc;color:black;">
+            Anodize
         </div>
 
     </div>
 
     <script>
 
-    const selectedTank = "__SELECTED_TANK__";
+    const selectedTank = "{selected_tank}";
 
-    function selectTank(tankName) {{
-
-        const payload = JSON.stringify({{
-            tank:tankName,
-            updatedAt:Date.now()
-        }});
-
-        try {{
-            window.parent.localStorage.setItem(
-                "selected_tank_payload",
-                payload
-            );
-        }}
-        catch(error) {{
-            localStorage.setItem(
-                "selected_tank_payload",
-                payload
-            );
-        }}
-
-        document.querySelectorAll(".tank[data-tank]")
-        .forEach((item)=>{{
-            item.classList.toggle(
-                "selected",
-                item.dataset.tank === tankName
-            );
-        }});
-    }}
-
-    document.querySelectorAll(".tank[data-tank]")
-    .forEach((tank)=>{{
-
-        tank.classList.add("clickable");
+    document.querySelectorAll(".tank").forEach((tank)=>{{
 
         if(tank.dataset.tank === selectedTank){{
             tank.classList.add("selected");
         }}
 
-        tank.addEventListener(
-            "click",
-            ()=>selectTank(tank.dataset.tank)
-        );
+        tank.addEventListener("click", ()=>{{
+
+            const value = tank.dataset.tank;
+
+            localStorage.setItem(
+                "selected_tank",
+                value
+            );
+
+            window.parent.location.reload();
+
+        }});
 
     }});
 
     </script>
     """
 
-    html = html.replace(
-        "__SELECTED_TANK__",
-        selected_tank_name
-    )
-
     components.html(
         html,
-        height=750,
+        height=760,
         scrolling=True
     )
+
+    # ===== อ่านค่าจาก localStorage =====
+    clicked = st_javascript("""
+    await (async () => {
+        return localStorage.getItem("selected_tank");
+    })()
+    """)
+
+    if clicked:
+        st.session_state["selected_tank"] = clicked
 #-----------------------------------------------------------------------
 
 def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
