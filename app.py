@@ -1315,11 +1315,12 @@ if menu == "Dashboard":
                     t_data = f_df_c[f_df_c["tank_name"] == t_name].sort_values("recorded_at")
                 
                     # หา "ชื่อสีจริง"
-                    color_name = tank_color_map.get(t_name, "Gray")
-                
-                    # หา HEX จาก COLOR_HEX_MAP
-                    clr = COLOR_HEX_MAP.get(color_name, "#666666")
-
+                    color_name = tank_color_map.get(t_name, "")
+                    
+                    # ใช้ฟังก์ชัน normalize ที่คุณมีอยู่แล้ว
+                    clr = get_hex_from_name(color_name)
+                    
+                    # สี temp ให้อ่อนลง
                     temp_clr = lighten_color(clr)
                 
                     # ===== pH =====
