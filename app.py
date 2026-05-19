@@ -1019,7 +1019,7 @@ def show_data_editor():
                             st.rerun()
 
 #=================================================================   
-menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต", "🛠️ จัดการและแก้ไขข้อมูล"])
+menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต","🎨 อัปเดตลงบ่อสี", "🛠️ จัดการและแก้ไขข้อมูล"])
 
 # ================= DASHBOARD (COMPACT & FIXED VERSION) =================
 if menu == "Dashboard":
@@ -1491,9 +1491,18 @@ if menu == "บันทึกข้อมูลการผลิต":
                             st.error(f"❌ รหัสสินค้า '{p_code}' นี้มีอยู่ในระบบแล้ว")
                         else:
                             payload = {
-                                "product_code": p_code, "product_name": p_name, "surface_finish": s_finish, 
-                                "unit_volume": u_vol, "height": height, "width": width, "thickness": thickness, 
-                                "depth": thickness, "shape": shape, "outer_diameter": od, "inner_diameter": id_inner
+                                "product_id": product_id,
+                                "qty": qty,
+                                "jig_code": jig_code,
+                            
+                                # ===== ยังไม่ลงบ่อ =====
+                                "tank_id": None,
+                                "tank_name_snapshot": None,
+                            
+                                # ===== สถานะ =====
+                                "status": "pending",
+                            
+                                "recorded_at": datetime.now(ICT).isoformat()
                             }
                             supabase.table("products").insert(payload).execute()
                             st.success(f"✅ ลงทะเบียนรหัส {p_code} สำเร็จ!")
@@ -1668,6 +1677,104 @@ if menu == "บันทึกข้อมูลการผลิต":
                                     st.success("งานเสร็จสิ้น")
                                     time.sleep(1)
                                     st.rerun()
+
+# ================= UPDATE TANK PAGE =================
+if menu == "🎨 อัปเดตลงบ่อสี":
+
+    st.title("🎨 อัปเดตลงบ่อสี")
+
+    try:
+
+        pending_res = supabase.table("production_logs") \
+            .select("*") \
+            .is_("tank_id", "null") \
+            .order("recorded_at", desc=True) \
+            .execute()
+
+        pending_logs = pending_res.data or []
+
+    except Exception as e:
+
+        st.error(f"โหลดงานรอชุบไม่สำเร็จ: {e}")
+        pending_logs = []
+
+    if not pending_logs:
+
+        st.success("✅ ไม่มีงานรออัปเดตบ่อสี")
+
+    else:
+
+        pending_df = pd.DataFrame(pending_logs)
+
+        # ===== โหลด product map =====
+        products = load_products()
+
+        product_map = {
+            p["product_id"]: (
+                f"{p['product_code']} | {p['product_name']}"
+            )
+            for p in products
+        }
+
+        # ===== แสดงรายการ =====
+        pending_df["display"] = pending_df.apply(
+            lambda row: (
+                f"{product_map.get(row['product_id'], 'Unknown')} "
+                f"| Jig: {row.get('jig_code','-')} "
+                f"| Qty: {row.get('qty',0)}"
+            ),
+            axis=1
+        )
+
+        selected_log_id = st.selectbox(
+            "เลือกงานที่ต้องการลงบ่อ",
+            options=pending_df["log_id"],
+            format_func=lambda x: pending_df[
+                pending_df["log_id"] == x
+            ]["display"].iloc[0]
+        )
+
+        # ===== เลือกบ่อสี =====
+        color_tanks = get_options(
+            "tanks",
+            "tank_id",
+            "tank_name",
+            "tank_type",
+            "Color"
+        )
+
+        selected_tank = st.selectbox(
+            "เลือกบ่อสี",
+            sorted(color_tanks.keys())
+        )
+
+        render_color_bar(selected_tank)
+
+        if st.button("💾 อัปเดตลงบ่อสี"):
+
+            try:
+
+                supabase.table("production_logs").update({
+
+                    "tank_id": color_tanks[selected_tank],
+                    "tank_name_snapshot": selected_tank,
+                    "status": "processing",
+                    "dip_started_at": datetime.now(ICT).isoformat()
+
+                }).eq(
+                    "log_id",
+                    int(selected_log_id)
+                ).execute()
+
+                st.success("✅ อัปเดตบ่อสีสำเร็จ")
+
+                time.sleep(1)
+
+                st.rerun()
+
+            except Exception as e:
+
+                st.error(f"อัปเดตไม่สำเร็จ: {e}")
 
 elif menu == "🛠️ จัดการและแก้ไขข้อมูล":
     show_data_editor()
