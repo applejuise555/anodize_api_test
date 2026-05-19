@@ -1854,15 +1854,13 @@ if menu == "บันทึกข้อมูลการผลิต":
                     axis=1
                 )
         
-                selected_log_id = st.selectbox(
+                selected_log_id = int(st.selectbox(
                     "เลือกงานที่ต้องการลงบ่อ",
-                    options=pending_df["log_id"],
-                    format_func=lambda x:
-                    pending_df[
+                    options=pending_df["log_id"].tolist(),
+                    format_func=lambda x: pending_df[
                         pending_df["log_id"] == x
-                    ]["display"].iloc[0],
-                    key="update_tank_select"
-                )
+                    ]["display"].iloc[0]
+                ))
         
                 # ===== เลือกบ่อ =====
                 color_tanks = get_options(
@@ -1908,9 +1906,9 @@ if menu == "บันทึกข้อมูลการผลิต":
         
                         }).eq(
                             "log_id",
-                            int(selected_log_id)
+                            int(str(selected_log_id))
                         ).execute()
-        
+            
                         # ===== update jig status =====
                         selected_row = pending_df[
                             pending_df["log_id"] == selected_log_id
