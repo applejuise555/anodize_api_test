@@ -1939,5 +1939,141 @@ if menu == "บันทึกข้อมูลการผลิต":
         
                         st.error(f"อัปเดตไม่สำเร็จ: {e}")
 
+        # =========================================================
+        # 🏁 TAB เสร็จสิ้นงาน
+        # =========================================================
+        with sub_finish:
+        
+            st.subheader("🏁 เสร็จสิ้นงาน")
+        
+            try:
+        
+                active_logs = (
+                    supabase.table("jig_usage_log")
+                    .select("*")
+                    .neq("status", "finished")
+                    .not_.is_("tank_id", "null")
+                    .order("recorded_date", desc=True)
+                    .execute()
+                )
+        
+                active_jobs = active_logs.data or []
+        
+            except Exception as e:
+        
+                st.error(f"โหลดงานไม่สำเร็จ: {e}")
+        
+                active_jobs = []
+        
+            if not active_jobs:
+        
+                st.success("✅ ไม่มีงานที่ต้องปิด")
+        
+            else:
+        
+                active_df = pd.DataFrame(active_jobs)
+        
+                # ===== product map =====
+                products = load_products()
+        
+                product_map = {
+                    p["product_id"]:
+                    f"{p['product_code']} | {p['product_name']}"
+                    for p in products
+                }
+        
+                # ===== jig map =====
+                jig_rows = (
+                    supabase.table("jigs")
+                    .select("jig_id, jig_model_code")
+                    .execute()
+                    .data
+                    or []
+                )
+        
+                jig_map = {
+                    j["jig_id"]: j["jig_model_code"]
+                    for j in jig_rows
+                }
+        
+                # ===== display =====
+                active_df["display"] = active_df.apply(
+                    lambda row:
+                    (
+                        f"{product_map.get(row['product_id'], 'Unknown')} "
+                        f"| Jig: {jig_map.get(row['jig_id'], '-')}"
+                        f"| Qty: {row.get('total_pieces',0)}"
+                        f"| Tank: {row.get('tank_name_snapshot', '-')}"
+                    ),
+                    axis=1
+                )
+        
+                close_count = st.number_input(
+                    "จำนวนงานที่ต้องการปิด",
+                    min_value=1,
+                    max_value=len(active_df),
+                    value=1
+                )
+        
+                st.info(
+                    f"ระบบจะปิดงานล่าสุดจำนวน {close_count} รายการ"
+                )
+        
+                st.dataframe(
+                    active_df[[
+                        "display",
+                        "recorded_date"
+                    ]].head(close_count),
+                    use_container_width=True,
+                    hide_index=True
+                )
+        
+                if st.button(
+                    "🏁 ยืนยันเสร็จสิ้นงาน",
+                    use_container_width=True
+                ):
+        
+                    try:
+        
+                        rows_to_close = active_df.head(close_count)
+        
+                        for _, row in rows_to_close.iterrows():
+        
+                            # ===== update jig_usage_log =====
+                            supabase.table("jig_usage_log").update({
+        
+                                "status": "finished"
+        
+                            }).eq(
+                                "log_id",
+                                int(row["log_id"])
+                            ).execute()
+        
+                            # ===== update jig_status =====
+                            supabase.table("jig_status").upsert({
+        
+                                "jig_id": int(row["jig_id"]),
+        
+                                "status_type": "Finished",
+        
+                                "current_tank_id": None,
+        
+                                "updated_at":
+                                datetime.now(ICT).isoformat()
+        
+                            }).execute()
+        
+                        st.success(
+                            f"✅ ปิดงานสำเร็จ {close_count} รายการ"
+                        )
+        
+                        time.sleep(1)
+        
+                        st.rerun()
+        
+                    except Exception as e:
+        
+                        st.error(f"ปิดงานไม่สำเร็จ: {e}")
+
 elif menu == "🛠️ จัดการและแก้ไขข้อมูล":
     show_data_editor()
