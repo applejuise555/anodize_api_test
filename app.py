@@ -1892,21 +1892,22 @@ if menu == "บันทึกข้อมูลการผลิต":
                         )
         
                         supabase.table("jig_usage_log").update({
-        
-                            "tank_id": color_tanks[selected_tank],
-        
-                            "tank_name_snapshot": selected_tank,
-        
-                            "color": real_color,
-        
+
+                            "tank_id": int(color_tanks[selected_tank]),
+                        
+                            "tank_name_snapshot": str(selected_tank),
+                        
+                            "color": str(
+                                tank_color_map.get(selected_tank, "")
+                            ),
+                        
                             "status": "processing",
-        
-                            "started_dip_at":
-                            datetime.now(ICT).isoformat()
-        
+                        
+                            "started_dip_at": datetime.now(ICT).isoformat()
+                        
                         }).eq(
                             "log_id",
-                            int(str(selected_log_id))
+                            int(selected_log_id)
                         ).execute()
             
                         # ===== update jig status =====
