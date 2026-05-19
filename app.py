@@ -1882,60 +1882,65 @@ if menu == "บันทึกข้อมูลการผลิต":
                     "💾 อัปเดตลงบ่อสี",
                     use_container_width=True
                 ):
-        
+                
                     try:
-        
-                        real_color = tank_color_map.get(
-                            selected_tank,
-                            "Unknown"
+                
+                        # ===== หา row ที่เลือก =====
+                        selected_row = pending_df[
+                            pending_df["log_id"] == selected_log_id
+                        ].iloc[0]
+                
+                        # ===== tank id =====
+                        selected_tank_id = int(
+                            color_tanks[selected_tank]
                         )
-        
+                
+                        # ===== color =====
+                        real_color = str(
+                            tank_color_map.get(selected_tank, "")
+                        )
+                
+                        # ===== update jig_usage_log =====
                         supabase.table("jig_usage_log").update({
-
-                            "tank_id": int(color_tanks[selected_tank]),
-                        
+                
+                            "tank_id": selected_tank_id,
+                
                             "tank_name_snapshot": str(selected_tank),
-                        
-                            "color": str(
-                                tank_color_map.get(selected_tank, "")
-                            ),
-                        
+                
+                            "color": real_color,
+                
                             "status": "processing",
-                        
-                            "started_dip_at": datetime.now(ICT).isoformat()
-                        
+                
+                            "started_dip_at":
+                            datetime.now(ICT).isoformat()
+                
                         }).eq(
                             "log_id",
                             int(selected_log_id)
                         ).execute()
-            
-                        # ===== update jig status =====
-                        selected_row = pending_df[
-                            pending_df["log_id"] == selected_log_id
-                        ].iloc[0]
-        
+                
+                        # ===== update jig_status =====
                         supabase.table("jig_status").upsert({
-        
-                            "jig_id": selected_row["jig_id"],
-        
+                
+                            "jig_id": int(selected_row["jig_id"]),
+                
                             "status_type": "In-Process",
-        
-                            "current_tank_id":
-                            color_tanks[selected_tank],
-        
+                
+                            "current_tank_id": selected_tank_id,
+                
                             "updated_at":
                             datetime.now(ICT).isoformat()
-        
+                
                         }).execute()
-        
+                
                         st.success("✅ อัปเดตบ่อสีสำเร็จ")
-        
+                
                         time.sleep(1)
-        
+                
                         st.rerun()
-        
+                
                     except Exception as e:
-        
+                
                         st.error(f"อัปเดตไม่สำเร็จ: {e}")
 
         # =========================================================
