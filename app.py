@@ -1613,75 +1613,171 @@ if menu == "บันทึกข้อมูลการผลิต":
                         action = st.radio("การทำงาน", ["🔵 บันทึกงานต่อ", "🟢 เสร็จสิ้นงาน"], key="action_radio")
 
                         if action == "🔵 บันทึกงานต่อ":
-                            sel_c_new = st.selectbox("เลือกสี", sorted(set(tank_color_map.values())), key="sel_c_log")
-                            filtered_tanks = {n: i for n, i in color_tanks_all.items() if tank_color_map.get(n) == sel_c_new}
-                            if filtered_tanks:
-                                sel_tank_name = st.selectbox("เลือกบ่อสี", list(filtered_tanks.keys()), key="sel_t_log")
-                                with st.form("continue_form_fixed", clear_on_submit=True):
-                                    c1, c2 = st.columns(2)
-                                    pcs = c1.number_input("จำนวนต่อแถว", min_value=0)
-                                    rows = c1.number_input("แถวที่เต็ม", min_value=0)
-                                    partial = c1.number_input("เศษ", min_value=0)
-                                    total_pcs = (rows * pcs) + partial
-                                    unit_vol = p_info.get('unit_volume', 0)
-                                    total_vol = unit_vol * total_pcs
-                                    c2.metric("จำนวนรวม (Pcs)", total_pcs)
-                                    c2.metric("ปริมาตรรวม (mm³)", f"{total_vol:,.2f}")
-                                    if st.form_submit_button("💾 บันทึก"):
-                                        try:
-                                            # 1. บันทึกข้อมูลลงในตาราง Log (ประวัติการใช้งาน)
-                                            supabase.table("jig_usage_log").insert({
-                                                "product_id": selected_prod_id, 
-                                                "jig_id": jig_id, 
-                                                "color": sel_c_new, 
-                                                "tank_id": filtered_tanks[sel_tank_name], 
-                                                "total_pieces": total_pcs, 
-                                                "total_volume": total_vol, 
-                                                "recorded_date": datetime.now(ICT).isoformat(),
-                                                "rows_filled": rows, 
-                                                "partial_pieces": partial,
-                                                "pcs_per_row": pcs
-                                            }).execute()
 
-                                            # 2. อัปเดตสถานะในตาราง jig_status (สำหรับ Dashboard)
-                                            supabase.table("jig_status").upsert({
-                                                "jig_id": jig_id, 
-                                                "status_type": "In-Process", 
-                                                "current_tank_id": filtered_tanks[sel_tank_name], 
-                                                "updated_at": datetime.now(ICT).isoformat()
-                                            }).execute()
-
-                                            # --- ส่วนที่เพิ่มใหม่: 3. อัปเดตจำนวนชิ้นงานในตาราง jigs ---
-                                            supabase.table("jigs").update({
-                                                "total_pcs_in_jig": total_pcs
-                                            }).eq("jig_id", jig_id).execute()
-
-                                            st.success(f"✅ บันทึกสำเร็จ: อัปเดตจำนวน {total_pcs} ชิ้นลงในจิ๊กเรียบร้อย")
-                                            time.sleep(1) # ให้ User เห็นข้อความ Success แป๊บหนึ่ง
-                                            st.rerun()
-
-                                        except Exception as e:
-                                            st.error(f"เกิดข้อผิดพลาดในการบันทึก: {str(e)}")
-                        elif action == "🟢 เสร็จสิ้นงาน":
-                            try:
-                                check_log = supabase.table("jig_usage_log").select("*").eq("jig_id", jig_id).limit(1).execute()
-                            except Exception as e:
-                                st.error(f"รายละเอียด Error: {e}") # ตรงนี้จะบอกชัดเจนว่าหาคอลัมน์ไม่เจอ หรือติด RLS
-    
-                            if not check_log.data:
-                                st.warning("⚠️ ไม่สามารถปิดงานได้: จิ๊กนี้ยังไม่มีการบันทึกข้อมูลการผลิต (กรุณาบันทึกงานต่อก่อน)")
+                            # ===== เพิ่มตัวเลือกยังไม่ลงบ่อ =====
+                            color_choices = ["⏳ ยังไม่ลงบ่อสี"] + sorted(
+                                set(tank_color_map.values())
+                            )
+                        
+                            sel_c_new = st.selectbox(
+                                "เลือกสี",
+                                color_choices,
+                                key="sel_c_log"
+                            )
+                        
+                            selected_tank_id = None
+                            selected_tank_name = None
+                            status_value = "pending"
+                        
+                            # =========================================================
+                            # กรณียังไม่ลงบ่อ
+                            # =========================================================
+                            if sel_c_new == "⏳ ยังไม่ลงบ่อสี":
+                        
+                                st.info("📌 งานนี้จะถูกบันทึกเป็น 'รอชุบ'")
+                        
+                            # =========================================================
+                            # กรณีเลือกสีจริง
+                            # =========================================================
                             else:
-                                if st.button("🏁 ยืนยันเสร็จสิ้นงาน"):
-                                    supabase.table("jig_status").upsert({
-                                        "jig_id": jig_id, 
-                                        "status_type": "Finished", 
-                                        "current_tank_id": None, 
-                                        "updated_at": datetime.now(ICT).isoformat()
-                                    }).execute()
-                                    st.success("งานเสร็จสิ้น")
-                                    time.sleep(1)
-                                    st.rerun()
-
+                        
+                                filtered_tanks = {
+                                    n: i
+                                    for n, i in color_tanks_all.items()
+                                    if tank_color_map.get(n) == sel_c_new
+                                }
+                        
+                                if filtered_tanks:
+                        
+                                    sel_tank_name = st.selectbox(
+                                        "เลือกบ่อสี",
+                                        list(filtered_tanks.keys()),
+                                        key="sel_t_log"
+                                    )
+                        
+                                    selected_tank_id = filtered_tanks[sel_tank_name]
+                                    selected_tank_name = sel_tank_name
+                                    status_value = "processing"
+                        
+                                    render_color_bar(sel_tank_name)
+                        
+                            # =========================================================
+                            # FORM
+                            # =========================================================
+                            with st.form("continue_form_fixed", clear_on_submit=True):
+                        
+                                c1, c2 = st.columns(2)
+                        
+                                pcs = c1.number_input(
+                                    "จำนวนต่อแถว",
+                                    min_value=0,
+                                    value=0
+                                )
+                        
+                                rows = c1.number_input(
+                                    "แถวที่เต็ม",
+                                    min_value=0,
+                                    value=0
+                                )
+                        
+                                partial = c1.number_input(
+                                    "เศษ",
+                                    min_value=0,
+                                    value=0
+                                )
+                        
+                                # ===== คำนวณ =====
+                                total_pcs = (rows * pcs) + partial
+                        
+                                unit_vol = p_info.get("unit_volume", 0)
+                        
+                                total_vol = unit_vol * total_pcs
+                        
+                                # ===== แสดงผล =====
+                                c2.metric(
+                                    "จำนวนรวม (Pcs)",
+                                    total_pcs
+                                )
+                        
+                                c2.metric(
+                                    "ปริมาตรรวม (mm³)",
+                                    f"{total_vol:,.2f}"
+                                )
+                        
+                                # =====================================================
+                                # SAVE
+                                # =====================================================
+                                if st.form_submit_button("💾 บันทึก"):
+                        
+                                    try:
+                        
+                                        supabase.table("jig_usage_log").insert({
+                        
+                                            "product_id": selected_prod_id,
+                                            "jig_id": jig_id,
+                        
+                                            "color": (
+                                                None
+                                                if sel_c_new == "⏳ ยังไม่ลงบ่อสี"
+                                                else sel_c_new
+                                            ),
+                        
+                                            "tank_id": selected_tank_id,
+                        
+                                            "tank_name_snapshot": selected_tank_name,
+                        
+                                            "status": status_value,
+                        
+                                            "total_pieces": total_pcs,
+                        
+                                            "total_volume": total_vol,
+                        
+                                            "recorded_date": datetime.now(ICT).isoformat(),
+                        
+                                            "rows_filled": rows,
+                        
+                                            "partial_pieces": partial,
+                        
+                                            "pcs_per_row": pcs
+                        
+                                        }).execute()
+                        
+                                        # ===== อัปเดต jig_status =====
+                                        supabase.table("jig_status").upsert({
+                        
+                                            "jig_id": jig_id,
+                        
+                                            "status_type": (
+                                                "Waiting"
+                                                if status_value == "pending"
+                                                else "In-Process"
+                                            ),
+                        
+                                            "current_tank_id": selected_tank_id,
+                        
+                                            "updated_at": datetime.now(ICT).isoformat()
+                        
+                                        }).execute()
+                        
+                                        # ===== update total pcs =====
+                                        supabase.table("jigs").update({
+                        
+                                            "total_pcs_in_jig": total_pcs
+                        
+                                        }).eq(
+                                            "jig_id",
+                                            jig_id
+                                        ).execute()
+                        
+                                        st.success("✅ บันทึกสำเร็จ")
+                        
+                                        time.sleep(1)
+                        
+                                        st.rerun()
+                        
+                                    except Exception as e:
+                        
+                                        st.error(f"เกิดข้อผิดพลาดในการบันทึก: {str(e)}")
 # ================= UPDATE TANK PAGE =================
 if menu == "🎨 อัปเดตลงบ่อสี":
 
