@@ -780,7 +780,7 @@ def show_data_editor():
             .select("*")\
             .gte("recorded_at", start_dt)\
             .lte("recorded_at", end_dt)\
-            .order("recorded_at", desc=True)\
+            .order("recorded_date", desc=True)
             .execute().data or []
     
         if not color_logs:
@@ -1685,7 +1685,7 @@ if menu == "🎨 อัปเดตลงบ่อสี":
 
     try:
 
-        pending_res = supabase.table("production_logs") \
+        pending_res = supabase.table("jig_usage_log") \
             .select("*") \
             .is_("tank_id", "null") \
             .order("recorded_at", desc=True) \
@@ -1764,12 +1764,12 @@ if menu == "🎨 อัปเดตลงบ่อสี":
 
             try:
 
-                supabase.table("production_logs").update({
+                supabase.table("jig_usage_log").update({
 
                     "tank_id": color_tanks[selected_tank],
                     "tank_name_snapshot": selected_tank,
                     "status": "processing",
-                    "dip_started_at": datetime.now(ICT).isoformat()
+                    "started_dip_at": datetime.now(ICT).isoformat()
 
                 }).eq(
                     "log_id",
