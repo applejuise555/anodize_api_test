@@ -1708,20 +1708,30 @@ if menu == "🎨 อัปเดตลงบ่อสี":
 
         # ===== โหลด product map =====
         products = load_products()
-
+        
         product_map = {
             p["product_id"]: (
                 f"{p['product_code']} | {p['product_name']}"
             )
             for p in products
         }
+        
+        # ===== โหลด jig map =====
+        jig_rows = supabase.table("jigs") \
+            .select("jig_id, jig_model_code") \
+            .execute().data or []
+        
+        jig_map = {
+            j["jig_id"]: j["jig_model_code"]
+            for j in jig_rows
+        }
 
-        # ===== แสดงรายการ =====
+        # ===== display =====
         pending_df["display"] = pending_df.apply(
             lambda row: (
                 f"{product_map.get(row['product_id'], 'Unknown')} "
-                f"| Jig: {row.get('jig_code','-')} "
-                f"| Qty: {row.get('qty',0)}"
+                f"| Jig: {jig_map.get(row['jig_id'], '-')}"
+                f"| Qty: {row.get('total_pieces',0)}"
             ),
             axis=1
         )
