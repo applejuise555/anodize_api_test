@@ -120,6 +120,80 @@ def get_quarter_range(year, quarter):
     else:
         end_date = datetime(year, end_month + 1, 1) - timedelta(days=1)
     return start_date, end_date
+
+#=============================================================================
+# =========================================================
+# STANDARD TANK CONFIG
+# =========================================================
+
+TANK_STANDARD_CONFIG = {
+
+    # ===== ANODIZE =====
+    "anodize": {
+
+        "temp_min": 18,
+        "temp_max": 22,
+
+        "warn_low": 17,
+        "warn_high": 23,
+
+        "color": "rgba(0,255,0,0.12)"
+    },
+
+    # ===== SEALER =====
+    "sealer": {
+
+        "temp_min": 90,
+        "temp_max": 95,
+
+        "warn_low": 85,
+        "warn_high": 98,
+
+        "color": "rgba(255,165,0,0.15)"
+    },
+
+    # ===== COLOR =====
+    "color": {
+
+        "temp_min": 45,
+        "temp_max": 60,
+
+        "warn_low": 40,
+        "warn_high": 65,
+
+        "color": "rgba(0,150,255,0.12)"
+    }
+}
+#=============================================================================
+# =========================================================
+# GET TANK CONFIG
+# =========================================================
+
+def get_tank_config(tank_name):
+
+    name = tank_name.lower()
+
+    # ===== SEALER =====
+    if (
+        "seal" in name
+        or "sealer" in name
+        or "almite" in name
+    ):
+
+        return TANK_STANDARD_CONFIG["sealer"]
+
+    # ===== ANODIZE =====
+    elif (
+        "anodize" in name
+        or "ano" in name
+    ):
+
+        return TANK_STANDARD_CONFIG["anodize"]
+
+    # ===== COLOR =====
+    else:
+
+        return TANK_STANDARD_CONFIG["color"]
 #=============================================================================
 @st.cache_data(ttl=30)
 def load_products():
@@ -1256,7 +1330,43 @@ if menu == "Dashboard":
                     tc1, tc2, tc3 = st.columns(3)
                     def plot_mini(title, col, std, color):
                         fig = go.Figure([go.Scatter(x=chart_df["recorded_at"], y=chart_df[col], mode='lines+markers', line_color=color, marker_size=4)])
-                        fig.add_hrect(y0=std[0], y1=std[1], fillcolor="green", opacity=0.1, line_width=0)
+                        # ===== tank standard =====
+                        config = get_tank_config(tank_name)
+                        # =========================================================
+                        # STANDARD AREA
+                        # =========================================================
+                        
+                        fig.add_hrect(
+                        
+                            y0=config["temp_min"],
+                            y1=config["temp_max"],
+                        
+                            fillcolor=config["color"],
+                        
+                            opacity=0.35,
+                        
+                            line_width=0
+                        )
+                        
+                        # ===== warning low =====
+                        fig.add_hline(
+                        
+                            y=config["warn_low"],
+                        
+                            line_dash="dash",
+                        
+                            line_color="orange"
+                        )
+                        
+                        # ===== warning high =====
+                        fig.add_hline(
+                        
+                            y=config["warn_high"],
+                        
+                            line_dash="dash",
+                        
+                            line_color="red"
+                        )
                         fig.update_layout(title=dict(text=title, font_size=11), height=150, margin=dict(l=5,r=5,t=30,b=5), yaxis_showgrid=False, xaxis_showticklabels=False)
                         return fig
                     tc1.plotly_chart(plot_mini("pH", "ph_value", STD["ANO_PH"], "#8E44AD"), use_container_width=True)
