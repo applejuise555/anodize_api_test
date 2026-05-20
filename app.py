@@ -175,7 +175,7 @@ def render_tank_map(selected_tank_name=None):
         position:relative;
         width:100%;
         min-width:1150px;
-        height:760px;
+        height:640px;
         background:#eef1f4;
         border:2px solid #999;
         margin:auto;
@@ -186,15 +186,16 @@ def render_tank_map(selected_tank_name=None):
     .tank{
         position:absolute;
         color:white;
-        font-weight:bold;
-        font-size:13px;
-        border-radius:8px;
-        padding:4px;
+        font-weight:700;
+        font-size:12px;
+        border-radius:10px;
+        padding:3px;
         text-align:center;
-        border:1px solid rgba(0,0,0,0.25);
+        border:1px solid rgba(0,0,0,0.18);
         box-sizing:border-box;
         font-family:Arial;
-        box-shadow:0 2px 5px rgba(0,0,0,0.15);
+        box-shadow:0 2px 6px rgba(0,0,0,0.18);
+        overflow:hidden;
     }
 
     .vertical{
@@ -234,70 +235,75 @@ def render_tank_map(selected_tank_name=None):
             5.Black
         </div>
 
+        <div class="tank" data-tank="5Black"
+        style="left:20px;top:20px;width:82px;height:82px;background:#111;">
+        5.Black
+        </div>
+        
         <div class="tank" data-tank="2Red"
-            style="left:140px;top:0px;width:70px;height:80px;background:red;">
-            2.Red
+        style="left:110px;top:20px;width:82px;height:82px;background:red;">
+        2.Red
         </div>
-
+        
         <div class="tank" data-tank="3Violet"
-            style="left:210px;top:0px;width:60px;height:80px;background:purple;">
-            3.Violet
+        style="left:200px;top:20px;width:82px;height:82px;background:purple;">
+        3.Violet
         </div>
-
+        
         <div class="tank" data-tank="8Green"
-            style="left:295px;top:0px;width:70px;height:80px;background:green;">
-            8.Green
+        style="left:290px;top:20px;width:82px;height:82px;background:green;">
+        8.Green
         </div>
-
+        
         <div class="tank" data-tank="17Black"
-            style="left:365px;top:0px;width:65px;height:80px;background:#222;">
-            17.Black
+        style="left:380px;top:20px;width:82px;height:82px;background:#222;">
+        17.Black
         </div>
-
+        
         <div class="tank" data-tank="15Gold"
-            style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">
-            15.Gold
+        style="left:470px;top:20px;width:82px;height:82px;background:#d4af00;color:black;">
+        15.Gold
         </div>
-
+        
         <div class="tank" data-tank="9Orange"
-            style="left:525px;top:0px;width:65px;height:80px;background:orange;">
-            9.Orange
+        style="left:560px;top:20px;width:82px;height:82px;background:orange;">
+        9.Orange
         </div>
-
+        
         <div class="tank" data-tank="10LightBlue"
-            style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">
-            10.Light Blue
+        style="left:650px;top:20px;width:82px;height:82px;background:cyan;color:black;">
+        10.LightBlue
         </div>
-
+        
         <div class="tank" data-tank="6BananaLeafGreen"
-            style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">
-            6.Banana
+        style="left:740px;top:20px;width:82px;height:82px;background:#7fff00;color:black;">
+        6.Banana
         </div>
-
+        
         <div class="tank" data-tank="16Blue"
-            style="left:785px;top:0px;width:70px;height:80px;background:blue;">
-            16.Blue
+        style="left:830px;top:20px;width:82px;height:82px;background:blue;">
+        16.Blue
         </div>
-
+        
         <div class="tank" data-tank="4DarkBlue"
-            style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">
-            4.Dark Blue
+        style="left:920px;top:20px;width:82px;height:82px;background:darkblue;">
+        4.DarkBlue
         </div>
 
         <!-- RO -->
 
         <div class="tank ro"
-            style="left:140px;top:82px;width:130px;height:65px;">
+            style="left:140px;top:82px;width:100px;height:55px;">
             RO
         </div>
 
         <div class="tank ro"
-            style="left:455px;top:82px;width:130px;height:65px;">
+            style="left:455px;top:82px;width:100px;height:55px;">
             RO
         </div>
 
         <div class="tank ro"
-            style="left:785px;top:82px;width:130px;height:65px;">
+            style="left:785px;top:82px;width:100px;height:55px;">
             RO
         </div>
 
