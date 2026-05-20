@@ -174,25 +174,27 @@ def render_tank_map(selected_tank_name=None):
     .plant-map{
         position:relative;
         width:100%;
-        min-width:1100px;
-        height:720px;
-        background:#e9e9e9;
+        min-width:1150px;
+        height:760px;
+        background:#eef1f4;
         border:2px solid #999;
         margin:auto;
-        overflow:Auto;
+        overflow:auto;
+        border-radius:12px;
     }
 
     .tank{
         position:absolute;
         color:white;
         font-weight:bold;
-        font-size:14px;
-        border-radius:4px;
+        font-size:13px;
+        border-radius:8px;
         padding:4px;
         text-align:center;
-        border:1px solid #555;
+        border:1px solid rgba(0,0,0,0.25);
         box-sizing:border-box;
         font-family:Arial;
+        box-shadow:0 2px 5px rgba(0,0,0,0.15);
     }
 
     .vertical{
