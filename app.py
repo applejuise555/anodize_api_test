@@ -328,7 +328,7 @@ def render_tank_map(selected_tank_name=None):
             HotSeal
         </div>
         <div class="tank vertical" data-tank="11Gold"
-            style="left:540px;top:325px;width:85px;height:125px;background:#d4af00;color:black;">
+            style="left:540px;top:320px;width:85px;height:125px;background:#d4af00;color:black;">
             11.Gold
         </div>
 
