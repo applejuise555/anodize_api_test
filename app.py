@@ -2050,7 +2050,9 @@ if menu == "บันทึกข้อมูลการผลิต":
                     supabase.table("jig_usage_log")
                     .select("*")
                     .neq("status", "finished")
-                    .not_.is_("tank_id", "null")
+                    .or_(
+                        "tank_id.not.is.null,color.eq.clear"
+                    )
                     .order("recorded_date", desc=True)
                     .execute()
                 )
