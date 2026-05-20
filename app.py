@@ -323,8 +323,8 @@ def render_tank_map(selected_tank_name=None):
             7.Pink
         </div>
 
-        <div class="tank ro" data-tank="HotSealH60"
-            style="left:540px;top:190px;width:90px;height:125px;background:#777;color:white !important;">
+        <div class="tank" data-tank="HotSealH60"
+            style="left:540px;top:190px;width:85px;height:125px;background:#777;">
             HotSeal
         </div>
         <div class="tank vertical" data-tank="11Gold"
