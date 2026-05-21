@@ -1491,7 +1491,7 @@ def show_data_editor():
                                 "temperature": temperature,
                                 "density": density
                             }
-                            update_row("anodize_tank_logs", "id", row["id"], update_payload)
+                            update_row("anodize_tank_logs", "log_id", row["log_id"], update_payload)
                             st.success("บันทึกสำเร็จ")
                             time.sleep(1)
                             st.rerun()
