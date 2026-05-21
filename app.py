@@ -1243,7 +1243,7 @@ def show_data_editor():
             st.markdown("---")
             st.subheader("✏️ แก้ไขข้อมูล")
     
-            for idx, row in tank_df.iterrows():
+            for idx, row in chem_df.iterrows():
     
                 with st.expander(f"⏰ {row['เวลา']}"):
     
