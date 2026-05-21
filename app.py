@@ -164,7 +164,7 @@ tank_color_map = load_tank_color_map()
 # =============================================================================
 # 📊 ฟังก์ชันสำหรับสร้างตารางสรุป แดชบอร์ดบ่อสี ประจำวันที่เลือก
 # =============================================================================
-def render_color_dashboard_table(target_date_str):
+def render_color__table(target_date_str):
     st.markdown("#### 🎨 ตารางสรุปค่าล่าสุด บ่อสี (Color Tanks)")
     
     start_dt = f"{target_date_str}T00:00:00"
@@ -220,7 +220,7 @@ def render_color_dashboard_table(target_date_str):
 # =============================================================================
 # 🧪 ฟังก์ชันสำหรับสร้างตารางสรุป แดชบอร์ดบ่อเคมี ประจำวันที่เลือก
 # =============================================================================
-def render_chemical_dashboard_table(target_date_str):
+def render_chemical__table(target_date_str):
     st.markdown("#### 🧪 ตารางสรุปค่าล่าสุด บ่อสารเคมี (Chemical Tanks)")
     
     start_dt = f"{target_date_str}T00:00:00"
@@ -1683,52 +1683,52 @@ if menu == "Dashboard":
         st.info("📅 ไม่มีข้อมูลบันทึกบ่อสีในช่วงวันที่เลือก")
 
 
-    # --- 2. Anodize/Seal (ตารางแสดงค่าล่าสุดของบ่อเคมีที่เลือก) ---
+    # --- 2. Anodize/Seal (ตารางแสดงประวัติบ่อเคมีตามวันที่เลือก) ---
     st.markdown("---")
     st.subheader("📈 เเนวโน้มบ่อ Anodize เเละ บ่อ Seal")
     
     if not df_a_filtered.empty:
-        c_sel1, c_sel2 = st.columns([1.2, 2.8])
+        c_sel1, c_sel2 = st.columns([1.3, 2.7])
         with c_sel1:
             sel_ano = st.selectbox("เลือกบ่อ", sorted(df_a_filtered["tank_name"].dropna().unique()), key="sb_ano")
             
-            # ดึงข้อมูลล่าสุดเฉพาะบ่อที่ถูกเลือก
-            latest_a_selected = df_a_filtered[df_a_filtered["tank_name"] == sel_ano].sort_values("recorded_at").tail(1)
+            # 🌟 แก้ไข: ดึงประวัติข้อมูลทั้งหมดของบ่อที่เลือกในช่วงวันที่กรองไว้ (เรียงจากเวลาล่าสุดขึ้นก่อน)
+            history_a_selected = df_a_filtered[df_a_filtered["tank_name"] == sel_ano].sort_values("recorded_at", ascending=False)
             
-            st.markdown(f"**🧪 ตารางสถานะล่าสุด: {sel_ano}**")
-            if not latest_a_selected.empty:
-                row = latest_a_selected.iloc[0]
-                t_name = str(row["tank_name"])
-                v_ph = float(row["ph_value"] or 0)
-                v_tmp = float(row["temperature"] or 0)
-                v_den = float(row["density"] or 0)
-                is_seal_t = "seal" in t_name.lower()
-                
-                # แยกตรวจสอบตามประเภทบ่อ (Seal vs Anodize)
-                if is_seal_t:
-                    style_p = "color:#DC2626; font-weight:bold;" if (v_ph < STD["SEAL_PH"][0] or v_ph > STD["SEAL_PH"][1]) else ""
-                    style_t = "color:#DC2626; font-weight:bold;" if (v_tmp < STD["SEAL_TEMP"][0] or v_tmp > STD["SEAL_TEMP"][1]) else ""
-                    txt_p = f"<span style='{style_p}'>{v_ph:.2f}</span>" if style_p else f"{v_ph:.2f}"
-                    txt_t = f"<span style='{style_t}'>{v_tmp:.1f}</span>" if style_t else f"{v_tmp:.1f}"
-                    txt_d = "<span style='color:#94A3B8;'>-</span>"
-                else:
-                    style_p = "color:#DC2626; font-weight:bold;" if (v_ph < STD["ANO_PH"][0] or v_ph > STD["ANO_PH"][1]) else ""
-                    style_t = "color:#DC2626; font-weight:bold;" if (v_tmp < STD["ANO_TEMP"][0] or v_tmp > STD["ANO_TEMP"][1]) else ""
-                    style_d = "color:#DC2626; font-weight:bold;" if (v_den < STD["ANO_DEN"][0] or v_den > STD["ANO_DEN"][1]) else ""
-                    txt_p = f"<span style='{style_p}'>{v_ph:.2f}</span>" if style_p else f"{v_ph:.2f}"
-                    txt_t = f"<span style='{style_t}'>{v_tmp:.1f}</span>" if style_t else f"{v_tmp:.1f}"
-                    txt_d = f"<span style='{style_d}'>{v_den:.3f}</span>" if style_d else f"{v_den:.3f}"
-                
-                chem_rows = [{
-                    "ชื่อบ่อ": t_name,
-                    "เวลาบันทึก": row["recorded_at"].strftime("%d/%m %H:%M"),
-                    "pH": txt_p,
-                    "Temp (°C)": txt_t,
-                    "Density": txt_d
-                }]
+            st.markdown(f"**🧪 ประวัติบันทึกตามวันที่เลือก: {sel_ano}**")
+            if not history_a_selected.empty:
+                chem_rows = []
+                for _, row in history_a_selected.iterrows():
+                    t_name = str(row["tank_name"])
+                    v_ph = float(row["ph_value"] or 0)
+                    v_tmp = float(row["temperature"] or 0)
+                    v_den = float(row["density"] or 0)
+                    is_seal_t = "seal" in t_name.lower()
+                    
+                    # แยกตรวจสอบเกณฑ์มาตรฐาน (Seal vs Anodize)
+                    if is_seal_t:
+                        style_p = "color:#DC2626; font-weight:bold;" if (v_ph < STD["SEAL_PH"][0] or v_ph > STD["SEAL_PH"][1]) else ""
+                        style_t = "color:#DC2626; font-weight:bold;" if (v_tmp < STD["SEAL_TEMP"][0] or v_tmp > STD["SEAL_TEMP"][1]) else ""
+                        txt_p = f"<span style='{style_p}'>{v_ph:.2f}</span>" if style_p else f"{v_ph:.2f}"
+                        txt_t = f"<span style='{style_t}'>{v_tmp:.1f}</span>" if style_t else f"{v_tmp:.1f}"
+                        txt_d = "<span style='color:#94A3B8;'>-</span>"
+                    else:
+                        style_p = "color:#DC2626; font-weight:bold;" if (v_ph < STD["ANO_PH"][0] or v_ph > STD["ANO_PH"][1]) else ""
+                        style_t = "color:#DC2626; font-weight:bold;" if (v_tmp < STD["ANO_TEMP"][0] or v_tmp > STD["ANO_TEMP"][1]) else ""
+                        style_d = "color:#DC2626; font-weight:bold;" if (v_den < STD["ANO_DEN"][0] or v_den > STD["ANO_DEN"][1]) else ""
+                        txt_p = f"<span style='{style_p}'>{v_ph:.2f}</span>" if style_p else f"{v_ph:.2f}"
+                        txt_t = f"<span style='{style_t}'>{v_tmp:.1f}</span>" if style_t else f"{v_tmp:.1f}"
+                        txt_d = f"<span style='{style_d}'>{v_den:.3f}</span>" if style_d else f"{v_den:.3f}"
+                    
+                    chem_rows.append({
+                        "เวลาบันทึก": row["recorded_at"].strftime("%d/%m %H:%M"),
+                        "pH": txt_p,
+                        "Temp": txt_t,
+                        "Density": txt_d
+                    })
                 st.write(pd.DataFrame(chem_rows).to_html(escape=False, index=False), unsafe_allow_html=True)
             else:
-                st.caption("📅 ไม่มีข้อมูลของบ่อนี้")
+                st.caption("📅 ไม่มีข้อมูลประวัติในช่วงวันที่เลือก")
         
         with c_sel2:
             chart_df = df_a_filtered[df_a_filtered["tank_name"] == sel_ano].sort_values("recorded_at")
@@ -1792,14 +1792,11 @@ if menu == "Dashboard":
                 st.plotly_chart(fig_mix, use_container_width=True)
 
 
-    # =============================================================================
-    # 🌟 --- ส่วนแก้ไข: แสดงประวัติดิบทั้งหมดของบ่อสีตามวันที่เลือก (เรียงลำดับตามเวลาล่าสุด) ---
-    # =============================================================================
+    # --- 4. ตารางประวัติบันทึกข้อมูลของบ่อสีตามช่วงเวลาที่เลือก (อยู่ล่างสุด) ---
     st.markdown("---")
     st.markdown("### 📋 ตารางประวัติบันทึกข้อมูลของบ่อสีตามช่วงเวลาที่เลือก")
     
     if not df_c_filtered.empty:
-        # เรียงลำดับข้อมูลดิบจากเวลาล่าสุดลงไปอดีตตามที่ Filter ไว้ (รองรับการเลือกหลายวันแบบแจกแจงทุกแถว)
         all_c_records = df_c_filtered.sort_values("recorded_at", ascending=False)
         
         color_rows = []
@@ -1807,7 +1804,6 @@ if menu == "Dashboard":
             v_ph = float(row["ph_value"] or 0)
             v_tmp = float(row["temperature"] or 0)
             
-            # ตรวจสอบเพื่อเปลี่ยนตัวหนังสือเป็น สีแดงหนา 🔴 หากหลุดเกณฑ์มาตรฐาน
             style_p = "color:#DC2626; font-weight:bold;" if (v_ph < STD["COLOR_PH"][0] or v_ph > STD["COLOR_PH"][1]) else ""
             style_t = "color:#DC2626; font-weight:bold;" if (v_tmp < STD["COLOR_TEMP"][0] or v_tmp > STD["COLOR_TEMP"][1]) else ""
             
@@ -1818,7 +1814,6 @@ if menu == "Dashboard":
                 "อุณหภูมิ (°C)": f"<span style='{style_t}'>{v_tmp:.1f}</span>" if style_t else f"{v_tmp:.1f}"
             })
             
-        # แสดงผลเป็น HTML Table หน้ากว้างเต็มจอเพื่อให้ไล่ดูประวัติในแต่ละวันได้ง่ายขึ้น
         st.write(pd.DataFrame(color_rows).to_html(escape=False, index=False), unsafe_allow_html=True)
     else:
         st.caption("📅 ไม่มีข้อมูลบันทึกบ่อสีในวันที่และเวลาที่กำหนด")
