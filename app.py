@@ -754,28 +754,75 @@ def show_data_editor():
                 col_save, col_delete = st.columns(2)
                 
                 if col_save.form_submit_button("💾 บันทึกการเปลี่ยนแปลง"):
+
                     try:
-                        update_row("jig_usage_log", id_col, id_val, {
-                            "product_id": selected_prod_id, # บันทึก ID ชิ้นงานใหม่ลงไป
-                            "pcs_per_row": pcs_per_row,
-                            "rows_filled": rows_filled,
-                            "partial_pieces": partial_pieces,
-                            "total_pieces": total_pieces
-                        })
-                        st.success("อัปเดตข้อมูลและเปลี่ยนชิ้นงานเรียบร้อยแล้ว!")
+                
+                        # =========================
+                        # 1. อัปเดต log ปัจจุบัน
+                        # =========================
+                        update_row(
+                            "jig_usage_log",
+                            id_col,
+                            id_val,
+                            {
+                                "product_id": selected_prod_id,
+                                "pcs_per_row": pcs_per_row,
+                                "rows_filled": rows_filled,
+                                "partial_pieces": partial_pieces,
+                                "total_pieces": total_pieces
+                            }
+                        )
+                
+                        # =========================
+                        # 2. ดึง log ทั้งหมดของ jig เดียวกัน
+                        # =========================
+                        jig_id = log.get("jig_id")
+                
+                        all_logs = supabase.table("jig_usage_log") \
+                            .select("""
+                                *,
+                                products(surface_area)
+                            """) \
+                            .eq("jig_id", jig_id) \
+                            .execute().data or []
+                
+                        # =========================
+                        # 3. คำนวณ total volume ใหม่
+                        # =========================
+                        total_volume = 0
+                
+                        for item in all_logs:
+                
+                            pcs = int(item.get("total_pieces") or 0)
+                
+                            product_data = item.get("products") or {}
+                
+                            surface_area = float(
+                                product_data.get("surface_area") or 0
+                            )
+                
+                            total_volume += pcs * surface_area
+                
+                        # =========================
+                        # 4. อัปเดตกลับเข้า jigs
+                        # =========================
+                        supabase.table("jigs") \
+                            .update({
+                                "total_volume": total_volume
+                            }) \
+                            .eq("jig_id", jig_id) \
+                            .execute()
+                
+                        st.success(
+                            f"อัปเดตข้อมูลเรียบร้อยแล้ว ✅\n\n"
+                            f"Total Volume ใหม่ = {total_volume:,.2f}"
+                        )
+                
                         time.sleep(1)
                         st.rerun()
+                
                     except Exception as e:
                         st.error(f"บันทึกไม่สำเร็จ: {e}")
-
-                if col_delete.form_submit_button("🗑️ ลบบันทึกนี้"):
-                    try:
-                        delete_row("jig_usage_log", id_col, id_val)
-                        st.success("ลบบันทึกงานจิ๊กแล้ว")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"ลบไม่สำเร็จ: {e}")
 
     with tab_color:
         st.subheader(f"🎨 บันทึกบ่อสีวันที่ {filter_date.strftime('%d/%m/%Y')}")
