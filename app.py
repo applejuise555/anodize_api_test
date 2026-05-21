@@ -804,12 +804,28 @@ def show_data_editor():
                     if current_tank_name not in tank_names:
                         current_tank_name = "- ยังไม่ลงบ่อ -"
                 
-                    selected_tank_name = st.selectbox(
-                        "เลือกบ่อสี",
-                        tank_names,
-                        index=tank_names.index(current_tank_name),
-                        key=f"edit_tank_{id_val}"
-                    )
+                    # ===== เลือกบ่อสี =====
+                    selected_color = selected_color_name.lower().strip()
+                    
+                    if selected_color == "clear":
+                    
+                        selected_tank_name = None
+                        st.info("🪟 สี Clear ไม่ต้องเลือกบ่อสี")
+                    
+                    else:
+                    
+                        # กัน current_tank_name ไม่มีใน list
+                        if current_tank_name in tank_names:
+                            tank_index = tank_names.index(current_tank_name)
+                        else:
+                            tank_index = 0
+                    
+                        selected_tank_name = st.selectbox(
+                            "เลือกบ่อสี",
+                            tank_names,
+                            index=tank_index,
+                            key=f"tank_select_{id_val}"
+                        )
                 col1, col2, col3 = st.columns(3)
                 pcs_per_row = col1.number_input("จำนวนต่อแถว", min_value=0, value=int(log.get("pcs_per_row") or 0))
                 rows_filled = col2.number_input("แถวที่เต็ม", min_value=0, value=int(log.get("rows_filled") or 0))
