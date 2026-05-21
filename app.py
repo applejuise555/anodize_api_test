@@ -754,63 +754,66 @@ def show_data_editor():
                 )
                 selected_prod_id = prod_options[new_product_id]
                 current_color = log.get("color") or "clear"
-                current_tank_name = log.get("tank_name_snapshot") or ""
-                
-                # ===== รายชื่อบ่อสี =====
-                tank_names = sorted(
-                    df_color["tank_name_snapshot"]
-                    .dropna()
-                    .unique()
-                    .tolist()
-                )
-                
-                # ===== เลือกสี =====
-                color_options = [
-                    "clear",
-                    "Black",
-                    "Red",
-                    "Blue",
-                    "Gold",
-                    "Green",
-                    "Orange",
-                    "Pink",
-                    "Titanium",
-                    "Dark Titanium"
-                ]
-                
-                if current_color in color_options:
-                    color_index = color_options.index(current_color)
+            current_tank_name = log.get("tank_name_snapshot") or ""
+            
+            # ===== รายชื่อบ่อสี =====
+            tank_rows = supabase.table("tanks") \
+                .select("tank_name") \
+                .execute().data or []
+            
+            tank_names = sorted([
+                t["tank_name"]
+                for t in tank_rows
+                if t.get("tank_name")
+            ])
+            
+            # ===== เลือกสี =====
+            color_options = [
+                "clear",
+                "Black",
+                "Red",
+                "Blue",
+                "Gold",
+                "Green",
+                "Orange",
+                "Pink",
+                "Titanium",
+                "Dark Titanium"
+            ]
+            
+            if current_color in color_options:
+                color_index = color_options.index(current_color)
+            else:
+                color_index = 0
+            
+            selected_color_name = st.selectbox(
+                "เลือกสี",
+                color_options,
+                index=color_index,
+                key=f"color_select_{id_val}"
+            )
+            
+            # ===== เลือกบ่อสี =====
+            selected_color = selected_color_name.lower().strip()
+            
+            if selected_color == "clear":
+            
+                selected_tank_name = None
+                st.info("🪟 สี Clear ไม่ต้องเลือกบ่อสี")
+            
+            else:
+            
+                if current_tank_name in tank_names:
+                    tank_index = tank_names.index(current_tank_name)
                 else:
-                    color_index = 0
-                
-                selected_color_name = st.selectbox(
-                    "เลือกสี",
-                    color_options,
-                    index=color_index,
-                    key=f"color_select_{id_val}"
+                    tank_index = 0
+            
+                selected_tank_name = st.selectbox(
+                    "เลือกบ่อสี",
+                    tank_names,
+                    index=tank_index,
+                    key=f"tank_select_{id_val}"
                 )
-                
-                # ===== เลือกบ่อสี =====
-                selected_color = selected_color_name.lower().strip()
-                
-                if selected_color == "clear":
-                
-                    selected_tank_name = None
-                    st.info("🪟 สี Clear ไม่ต้องเลือกบ่อสี")
-                
-                else:
-                
-                    if current_tank_name in tank_names:
-                        tank_index = tank_names.index(current_tank_name)
-                    else:
-                        tank_index = 0
-                
-                    selected_tank_name = st.selectbox(
-                        "เลือกบ่อสี",
-                        tank_names,
-                        index=tank_index,
-                        key=f"tank_select_{id_val}"
-                    )
                 
                 col1, col2, col3 = st.columns(3)
                 pcs_per_row = col1.number_input("จำนวนต่อแถว", min_value=0, value=int(log.get("pcs_per_row") or 0))
