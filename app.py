@@ -791,6 +791,16 @@ def show_data_editor():
                     or "- ยังไม่ลงบ่อ -"
                 )
                 
+                # กันกรณีไม่มีชื่อบ่อใน list
+                if current_tank_name not in tank_names:
+                    current_tank_name = "- ยังไม่ลงบ่อ -"
+                
+                selected_tank_name = st.selectbox(
+                    "เลือกบ่อสี",
+                    tank_names,
+                    index=tank_names.index(current_tank_name)
+                )
+                
                 selected_tank_name = st.selectbox(
                     "เลือกบ่อสี",
                     tank_names,
