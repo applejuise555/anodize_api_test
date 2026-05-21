@@ -922,21 +922,13 @@ def show_data_editor():
                         # 4. อัปเดต jig_usage_log
                         # =========================================================
                         update_row("jig_usage_log", id_col, id_val, {
-
                             "product_id": selected_prod_id,
-                        
                             "pcs_per_row": pcs_per_row,
                             "rows_filled": rows_filled,
                             "partial_pieces": partial_pieces,
                             "total_pieces": total_pieces,
-                        
-                            "color": selected_color,
-                        
-                            "tank_name_snapshot": (
-                                None
-                                if selected_color == "clear"
-                                else selected_tank_name
-                            )
+                            "color": selected_color_name,
+                            "tank_name_snapshot": selected_tank_name
                         })
                 
                         # =========================================================
