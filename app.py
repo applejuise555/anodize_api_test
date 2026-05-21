@@ -812,10 +812,6 @@ def show_data_editor():
     
                     selected_prod_id = prod_options[new_product_id]
     
-                    # =====================================================
-                    # เลือกสี
-                    # =====================================================
-    
                     # ===== เลือกสี =====
                     color_options = [
                         "Clear",
@@ -887,7 +883,6 @@ def show_data_editor():
                             index=tank_index,
                             key=f"tank_select_{id_val}"
                         )
-    
                     selected_color = selected_color_name.lower().strip()
     
                     # =====================================================
