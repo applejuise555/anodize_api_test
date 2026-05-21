@@ -657,7 +657,6 @@ def show_data_editor():
             with st.form("edit_jig_form"):
                 jig_model_code = st.text_input("รหัสจิ๊ก", value=j.get("jig_model_code", ""))
                 lot_no = st.text_input("Lot No.", value=j.get("lot_no", ""))
-                total_pcs_in_jig = st.number_input("จำนวนชิ้นในจิ๊ก", min_value=0, value=int(j.get("total_pcs_in_jig") or 0))
 
                 col_save, col_delete = st.columns(2)
                 if col_save.form_submit_button("💾 บันทึกจิ๊ก"):
@@ -665,7 +664,6 @@ def show_data_editor():
                         update_row("jigs", "jig_id", j["jig_id"], {
                             "jig_model_code": jig_model_code,
                             "lot_no": lot_no,
-                            "total_pcs_in_jig": total_pcs_in_jig
                         })
                         st.success("บันทึกข้อมูลจิ๊กแล้ว")
                         time.sleep(1)
