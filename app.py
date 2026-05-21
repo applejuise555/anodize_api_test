@@ -753,6 +753,17 @@ def show_data_editor():
                     index=current_index
                 )
                 selected_prod_id = prod_options[new_product_id]
+                current_color = log.get("color") or "clear"
+                current_tank_name = log.get("tank_name_snapshot") or ""
+                
+                # ===== รายชื่อบ่อสี =====
+                tank_names = sorted(
+                    df_color["tank_name_snapshot"]
+                    .dropna()
+                    .unique()
+                    .tolist()
+                )
+                
                 # ===== เลือกสี =====
                 color_options = [
                     "clear",
@@ -766,9 +777,6 @@ def show_data_editor():
                     "Titanium",
                     "Dark Titanium"
                 ]
-                
-                current_color = log.get("color") or "clear"
-                current_tank_name = log.get("tank_name_snapshot") or ""
                 
                 if current_color in color_options:
                     color_index = color_options.index(current_color)
