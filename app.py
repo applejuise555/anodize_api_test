@@ -817,7 +817,7 @@ def show_data_editor():
                     # =====================================================
     
                     color_options = [
-                        "clear",
+                        "Clear",
                         "Black",
                         "Red",
                         "Blue",
@@ -851,6 +851,8 @@ def show_data_editor():
                     
                     current_tank_name = log.get("tank_name_snapshot") or ""
                     
+                    selected_color = str(selected_color_name).strip().lower()
+
                     if selected_color == "clear":
                     
                         selected_tank_name = None
@@ -870,7 +872,6 @@ def show_data_editor():
                             index=tank_index,
                             key=f"tank_select_{id_val}"
                         )
-    
                     # =====================================================
                     # จำนวน
                     # =====================================================
