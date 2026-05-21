@@ -682,278 +682,341 @@ def show_data_editor():
                     except Exception as e:
                         st.error(f"ลบไม่ได้ อาจมี log อ้างอิงอยู่: {e}")
 
-    with tab_jiglog:
-        # 1. กำหนดช่วงเวลาเริ่มและจบของวันที่เลือก (ISO Format สำหรับ timestamptz)
-        start_of_day = f"{filter_date_str}T00:00:00+07:00"
-        end_of_day = f"{filter_date_str}T23:59:59+07:00"
+        with tab_jiglog:
 
-        st.subheader(f"⚡ รายการบันทึกจิ๊กของวันที่ {filter_date.strftime('%d/%m/%Y')}")
-        
-        # 2. แก้ไข Filter จาก .eq เป็น .gte และ .lte
-        logs = supabase.table("jig_usage_log")\
-            .select("*, products(product_code), jigs(jig_model_code)")\
-            .gte("recorded_date", start_of_day)\
-            .lte("recorded_date", end_of_day)\
-            .order("recorded_date", desc=True).execute().data or []
-
-        if not logs:
-            st.warning(f"📅 ไม่มีข้อมูลบันทึกงานจิ๊กในวันที่ {filter_date}")
-        else:
-            # 1. เตรียมข้อมูล Log ที่จะแก้ไข
-            log_map = {}
-            for l in logs:
-                dt_ict = datetime.fromisoformat(l.get('recorded_date').replace('Z', '+00:00')).astimezone(ICT)
-                time_str = dt_ict.strftime("%H:%M")
-                j_code = l.get('jigs', {}).get('jig_model_code', 'N/A')
-                p_code = l.get('products', {}).get('product_code', 'N/A')
-                label = f"⏰ {time_str} | จิ๊ก: {j_code} | สินค้าเดิม: {p_code}"
-                log_map[label] = l
-            
-            selected_label = st.selectbox("เลือกรายการที่ต้องการจัดการ", list(log_map.keys()), key="edit_jiglog_sel")
-            log = log_map[selected_label]
-            id_col, id_val = get_pk(log, ["log_id", "id", "jig_usage_log_id"])
-
-            # 2. ดึงรายชื่อสินค้าทั้งหมด เพื่อใช้เป็นตัวเลือกใหม่
-            all_products = supabase.table("products").select("product_id, product_code, product_name").order("product_code").execute().data or []
-            prod_options = {f"{p['product_code']} | {p['product_name']}": p['product_id'] for p in all_products}
-            
-            # หาตำแหน่ง (index) ของสินค้าเดิมในลิสต์ใหม่ เพื่อให้ Selectbox เริ่มที่ค่าเดิม
-            current_prod_id = log.get('product_id')
-            current_index = 0
-            option_list = list(prod_options.keys())
-            for i, label in enumerate(option_list):
-                if prod_options[label] == current_prod_id:
-                    current_index = i
-                    break
-
-            # 3. ฟอร์มการแก้ไข
-            # ===== โหลดบ่อสี =====
-            tank_rows = supabase.table("tanks") \
-                .select("tank_id, tank_name") \
-                .ilike("tank_type", "%color%") \
-                .order("tank_name") \
-                .execute().data or []
-            
-            tank_options = {
-                t["tank_name"]: t["tank_id"]
-                for t in tank_rows
-            }
-            with st.form("edit_jiglog_form_v2"):
-                st.markdown("### 🔄 เปลี่ยนชิ้นงานและแก้ไขจำนวน")
-                
-                # แสดงชื่อสินค้าเดิมเพื่อให้อ้างอิงง่าย
-                old_p_code = log.get('products', {}).get('product_code', 'N/A')
-                old_p_name = log.get('products', {}).get('product_name', 'N/A')
-                st.text_input("ชิ้นงานเดิม (อ่านเท่านั้น)", value=f"{old_p_code} - {old_p_name}", disabled=True)
-                
-                # เลือกชิ้นงานใหม่
-                new_product_id = st.selectbox(
-                    "เลือกชิ้นงานใหม่ (หากต้องการเปลี่ยน)", 
-                    options=option_list, 
-                    index=current_index
-                )
-                selected_prod_id = prod_options[new_product_id]
-                current_color = log.get("color") or "clear"
-            current_tank_name = log.get("tank_name_snapshot") or ""
-            
-            # ===== รายชื่อบ่อสี =====
-            tank_rows = supabase.table("tanks") \
-                .select("tank_name") \
-                .execute().data or []
-            
-            tank_names = sorted([
-                t["tank_name"]
-                for t in tank_rows
-                if t.get("tank_name")
-            ])
-            
-            # ===== เลือกสี =====
-            color_options = [
-                "clear",
-                "Black",
-                "Red",
-                "Blue",
-                "Gold",
-                "Green",
-                "Orange",
-                "Pink",
-                "Titanium",
-                "Dark Titanium"
-            ]
-            
-            if current_color in color_options:
-                color_index = color_options.index(current_color)
-            else:
-                color_index = 0
-            
-            selected_color_name = st.selectbox(
-                "เลือกสี",
-                color_options,
-                index=color_index,
-                key=f"color_select_{id_val}"
+            start_of_day = f"{filter_date_str}T00:00:00+07:00"
+            end_of_day = f"{filter_date_str}T23:59:59+07:00"
+    
+            st.subheader(f"⚡ รายการบันทึกจิ๊กของวันที่ {filter_date.strftime('%d/%m/%Y')}")
+    
+            logs = (
+                supabase.table("jig_usage_log")
+                .select("*, products(product_code, product_name), jigs(jig_model_code)")
+                .gte("recorded_date", start_of_day)
+                .lte("recorded_date", end_of_day)
+                .order("recorded_date", desc=True)
+                .execute()
+                .data
+                or []
             )
-            
-            # ===== เลือกบ่อสี =====
-            selected_color = selected_color_name.lower().strip()
-            
-            if selected_color == "clear":
-            
-                selected_tank_name = None
-                st.info("🪟 สี Clear ไม่ต้องเลือกบ่อสี")
-            
+    
+            if not logs:
+                st.warning(f"📅 ไม่มีข้อมูลบันทึกงานจิ๊กในวันที่ {filter_date}")
+    
             else:
-            
-                if current_tank_name in tank_names:
-                    tank_index = tank_names.index(current_tank_name)
-                else:
-                    tank_index = 0
-            
-                selected_tank_name = st.selectbox(
-                    "เลือกบ่อสี",
-                    tank_names,
-                    index=tank_index,
-                    key=f"tank_select_{id_val}"
+    
+                log_map = {}
+    
+                for l in logs:
+    
+                    dt_ict = datetime.fromisoformat(
+                        l.get("recorded_date").replace("Z", "+00:00")
+                    ).astimezone(ICT)
+    
+                    time_str = dt_ict.strftime("%H:%M")
+    
+                    j_code = l.get("jigs", {}).get("jig_model_code", "N/A")
+                    p_code = l.get("products", {}).get("product_code", "N/A")
+    
+                    label = f"⏰ {time_str} | จิ๊ก: {j_code} | สินค้าเดิม: {p_code}"
+    
+                    log_map[label] = l
+    
+                selected_label = st.selectbox(
+                    "เลือกรายการที่ต้องการจัดการ",
+                    list(log_map.keys()),
+                    key="edit_jiglog_sel"
                 )
-                
-                col1, col2, col3 = st.columns(3)
-                pcs_per_row = col1.number_input("จำนวนต่อแถว", min_value=0, value=int(log.get("pcs_per_row") or 0))
-                rows_filled = col2.number_input("แถวที่เต็ม", min_value=0, value=int(log.get("rows_filled") or 0))
-                partial_pieces = col3.number_input("เศษ", min_value=0, value=int(log.get("partial_pieces") or 0))
-
-                total_pieces = (pcs_per_row * rows_filled) + partial_pieces
-                st.info(f"🔢 จำนวนรวมใหม่: {total_pieces} ชิ้น")
-
-                col_save, col_delete = st.columns(2)
-
-                save_btn = False
-                delete_btn = False
-                
-                with col_save:
-                    save_btn = st.form_submit_button("💾 บันทึกการเปลี่ยนแปลง")
-                
-                with col_delete:
-                    delete_btn = st.form_submit_button("🗑️ ลบบันทึกนี้")
-                
-                # =========================================================
-                # 💾 SAVE
-                # =========================================================
-                if save_btn:
-                
-                    try:
-                
-                        # =========================================================
-                        # 1. คำนวณจำนวนรวม
-                        # =========================================================
-                        total_pieces = (
-                            (pcs_per_row * rows_filled)
-                            + partial_pieces
+    
+                log = log_map[selected_label]
+    
+                id_col, id_val = get_pk(
+                    log,
+                    ["log_id", "id", "jig_usage_log_id"]
+                )
+    
+                # =====================================================
+                # โหลดสินค้า
+                # =====================================================
+    
+                all_products = (
+                    supabase.table("products")
+                    .select("product_id, product_code, product_name")
+                    .order("product_code")
+                    .execute()
+                    .data
+                    or []
+                )
+    
+                prod_options = {
+                    f"{p['product_code']} | {p['product_name']}": p["product_id"]
+                    for p in all_products
+                }
+    
+                option_list = list(prod_options.keys())
+    
+                current_prod_id = log.get("product_id")
+    
+                current_index = 0
+    
+                for i, label in enumerate(option_list):
+    
+                    if prod_options[label] == current_prod_id:
+                        current_index = i
+                        break
+    
+                # =====================================================
+                # โหลดบ่อสี
+                # =====================================================
+    
+                tank_rows = (
+                    supabase.table("tanks")
+                    .select("tank_name")
+                    .execute()
+                    .data
+                    or []
+                )
+    
+                tank_names = sorted([
+                    t["tank_name"]
+                    for t in tank_rows
+                    if t.get("tank_name")
+                ])
+    
+                # =====================================================
+                # FORM
+                # =====================================================
+    
+                with st.form("edit_jiglog_form_v2"):
+    
+                    st.markdown("### 🔄 เปลี่ยนชิ้นงานและแก้ไขจำนวน")
+    
+                    old_p_code = log.get("products", {}).get("product_code", "N/A")
+                    old_p_name = log.get("products", {}).get("product_name", "N/A")
+    
+                    st.text_input(
+                        "ชิ้นงานเดิม",
+                        value=f"{old_p_code} - {old_p_name}",
+                        disabled=True
+                    )
+    
+                    # =====================================================
+                    # เลือกสินค้า
+                    # =====================================================
+    
+                    new_product_id = st.selectbox(
+                        "เลือกชิ้นงานใหม่",
+                        options=option_list,
+                        index=current_index
+                    )
+    
+                    selected_prod_id = prod_options[new_product_id]
+    
+                    # =====================================================
+                    # เลือกสี
+                    # =====================================================
+    
+                    color_options = [
+                        "clear",
+                        "Black",
+                        "Red",
+                        "Blue",
+                        "Gold",
+                        "Green",
+                        "Orange",
+                        "Pink",
+                        "Titanium",
+                        "Dark Titanium"
+                    ]
+    
+                    current_color = log.get("color") or "clear"
+    
+                    if current_color in color_options:
+                        color_index = color_options.index(current_color)
+                    else:
+                        color_index = 0
+    
+                    selected_color_name = st.selectbox(
+                        "เลือกสี",
+                        color_options,
+                        index=color_index,
+                        key=f"color_select_{id_val}"
+                    )
+    
+                    selected_color = selected_color_name.lower().strip()
+    
+                    # =====================================================
+                    # เลือกบ่อสี
+                    # =====================================================
+    
+                    current_tank_name = log.get("tank_name_snapshot") or ""
+    
+                    if selected_color == "clear":
+    
+                        selected_tank_name = None
+    
+                        st.info("🪟 สี Clear ไม่ต้องเลือกบ่อสี")
+    
+                    else:
+    
+                        if current_tank_name in tank_names:
+                            tank_index = tank_names.index(current_tank_name)
+                        else:
+                            tank_index = 0
+    
+                        selected_tank_name = st.selectbox(
+                            "เลือกบ่อสี",
+                            tank_names,
+                            index=tank_index,
+                            key=f"tank_select_{id_val}"
                         )
-                
-                        # =========================================================
-                        # 2. ดึงข้อมูลสินค้าใหม่
-                        # =========================================================
-                        product_info = (
-                            supabase.table("products")
-                            .select("*")
-                            .eq("product_id", selected_prod_id)
-                            .single()
-                            .execute()
-                            .data
-                        )
-                
-                        # =========================================================
-                        # 3. คำนวณปริมาตรต่อชิ้น
-                        # =========================================================
-                        width = float(product_info.get("width_mm") or 0)
-                        height = float(product_info.get("height_mm") or 0)
-                        length = float(product_info.get("length_mm") or 0)
-                
-                        volume_per_piece = (
-                            width * height * length
-                        ) / 1000000
-                
-                        # =========================================================
-                        # 4. total volume ของ log นี้
-                        # =========================================================
-                        log_total_volume = (
-                            volume_per_piece * total_pieces
-                        )
-                
-                        # =========================================================
-                        # 5. update jig_usage_log
-                        # =========================================================
-                        update_payload = {
-                            "product_id": selected_prod_id,
-                            "pcs_per_row": pcs_per_row,
-                            "rows_filled": rows_filled,
-                            "partial_pieces": partial_pieces,
-                            "total_pieces": total_pieces,
-                            "total_volume": log_total_volume,
-                            "color": selected_color_name,
-                            "tank_name_snapshot": selected_tank_name
-                        }
-                
-                        update_row(
-                            "jig_usage_log",
-                            id_col,
-                            id_val,
-                            update_payload
-                        )
-                
-                        # =========================================================
-                        # 6. อัปเดต total volume ของจิ๊ก
-                        # =========================================================
-                        jig_id = log.get("jig_id")
-                
-                        all_logs = (
-                            supabase.table("jig_usage_log")
-                            .select("*")
-                            .eq("jig_id", jig_id)
-                            .execute()
-                            .data
-                            or []
-                        )
-                
-                        total_jig_volume = sum([
-                            float(x.get("total_volume") or 0)
-                            for x in all_logs
-                        ])
-                
-                        update_row(
-                            "jigs",
-                            "jig_id",
-                            jig_id,
-                            {
-                                "total_volume": total_jig_volume
+    
+                    # =====================================================
+                    # จำนวน
+                    # =====================================================
+    
+                    col1, col2, col3 = st.columns(3)
+    
+                    pcs_per_row = col1.number_input(
+                        "จำนวนต่อแถว",
+                        min_value=0,
+                        value=int(log.get("pcs_per_row") or 0)
+                    )
+    
+                    rows_filled = col2.number_input(
+                        "แถวที่เต็ม",
+                        min_value=0,
+                        value=int(log.get("rows_filled") or 0)
+                    )
+    
+                    partial_pieces = col3.number_input(
+                        "เศษ",
+                        min_value=0,
+                        value=int(log.get("partial_pieces") or 0)
+                    )
+    
+                    total_pieces = (
+                        (pcs_per_row * rows_filled)
+                        + partial_pieces
+                    )
+    
+                    st.info(f"🔢 จำนวนรวมใหม่: {total_pieces} ชิ้น")
+    
+                    # =====================================================
+                    # BUTTONS
+                    # =====================================================
+    
+                    col_save, col_delete = st.columns(2)
+    
+                    with col_save:
+                        save_btn = st.form_submit_button("💾 บันทึกการเปลี่ยนแปลง")
+    
+                    with col_delete:
+                        delete_btn = st.form_submit_button("🗑️ ลบบันทึกนี้")
+    
+                    # =====================================================
+                    # SAVE
+                    # =====================================================
+    
+                    if save_btn:
+    
+                        try:
+    
+                            product_info = (
+                                supabase.table("products")
+                                .select("*")
+                                .eq("product_id", selected_prod_id)
+                                .single()
+                                .execute()
+                                .data
+                            )
+    
+                            width = float(product_info.get("width_mm") or 0)
+                            height = float(product_info.get("height_mm") or 0)
+                            length = float(product_info.get("length_mm") or 0)
+    
+                            volume_per_piece = (
+                                width * height * length
+                            ) / 1000000
+    
+                            log_total_volume = (
+                                volume_per_piece * total_pieces
+                            )
+    
+                            update_payload = {
+                                "product_id": selected_prod_id,
+                                "pcs_per_row": pcs_per_row,
+                                "rows_filled": rows_filled,
+                                "partial_pieces": partial_pieces,
+                                "total_pieces": total_pieces,
+                                "total_volume": log_total_volume,
+                                "color": selected_color_name,
+                                "tank_name_snapshot": selected_tank_name
                             }
-                        )
-                
-                        st.success("อัปเดตข้อมูลเรียบร้อยแล้ว!")
-                        time.sleep(1)
-                        st.rerun()
-                
-                    except Exception as e:
-                        st.error(f"บันทึกไม่สำเร็จ: {e}")
-                
-                # =========================================================
-                # 🗑️ DELETE
-                # =========================================================
-                if delete_btn:
-                
-                    try:
-                
-                        delete_row(
-                            "jig_usage_log",
-                            id_col,
-                            id_val
-                        )
-                
-                        st.success("ลบบันทึกงานจิ๊กแล้ว")
-                        time.sleep(1)
-                        st.rerun()
-                
-                    except Exception as e:
-                        st.error(f"ลบไม่สำเร็จ: {e}")
+    
+                            update_row(
+                                "jig_usage_log",
+                                id_col,
+                                id_val,
+                                update_payload
+                            )
+    
+                            # =====================================================
+                            # รวม total volume ของทั้งจิ๊ก
+                            # =====================================================
+    
+                            jig_id = log.get("jig_id")
+    
+                            all_logs = (
+                                supabase.table("jig_usage_log")
+                                .select("total_volume")
+                                .eq("jig_id", jig_id)
+                                .execute()
+                                .data
+                                or []
+                            )
+    
+                            total_jig_volume = sum([
+                                float(x.get("total_volume") or 0)
+                                for x in all_logs
+                            ])
+    
+                            update_row(
+                                "jigs",
+                                "jig_id",
+                                jig_id,
+                                {
+                                    "total_volume": total_jig_volume
+                                }
+                            )
+    
+                            st.success("อัปเดตข้อมูลเรียบร้อยแล้ว!")
+                            time.sleep(1)
+                            st.rerun()
+    
+                        except Exception as e:
+                            st.error(f"บันทึกไม่สำเร็จ: {e}")
+    
+                    # =====================================================
+                    # DELETE
+                    # =====================================================
+    
+                    if delete_btn:
+    
+                        try:
+    
+                            delete_row(
+                                "jig_usage_log",
+                                id_col,
+                                id_val
+                            )
+    
+                            st.success("ลบบันทึกงานจิ๊กแล้ว")
+                            time.sleep(1)
+                            st.rerun()
+    
+                        except Exception as e:
+                            st.error(f"ลบไม่สำเร็จ: {e}")
 
     with tab_color:
         st.subheader(f"🎨 บันทึกบ่อสีวันที่ {filter_date.strftime('%d/%m/%Y')}")
