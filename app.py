@@ -509,13 +509,20 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
         with st.form("dialog_chemical_log_form", clear_on_submit=True):
             temp_val = st.number_input("อุณหภูมิ (°C)", step=0.1, format="%.1f")
 
-            ph_val = None
+            ph_val = st.number_input(
+                "ค่า pH",
+                step=0.01,
+                format="%.2f"
+            )
+            
             den_val = None
-
+            
             if not is_sealer:
-                ph_val = st.number_input("ค่า pH", step=0.01, format="%.2f")
-                den_val = st.number_input("ความหนาแน่น (Density)", step=0.001, format="%.3f")
-
+                den_val = st.number_input(
+                    "ความหนาแน่น (Density)",
+                    step=0.001,
+                    format="%.3f"
+                )
             if st.form_submit_button("💾 บันทึกข้อมูล"):
                 payload = {
                 "tank_id": chemical_tanks[clicked_tank_name],
@@ -524,13 +531,12 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
                 "recorded_at": datetime.now(ICT).isoformat()
             }
 
+                payload["ph_value"] = ph_val
+
                 if not is_sealer:
-                    payload["ph_value"] = ph_val
                     payload["density"] = den_val
                 else:
-                    payload["ph_value"] = 0.0
                     payload["density"] = 0.0
-
                 supabase.table("anodize_tank_logs").insert(payload).execute()
                 st.success(f"✅ บันทึกข้อมูลบ่อ {clicked_tank_name} สำเร็จ")
                 st.session_state["open_tank_dialog"] = False
