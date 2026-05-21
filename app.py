@@ -1178,8 +1178,12 @@ def show_data_editor():
 
     with tab_color:
         st.subheader(f"🎨 บันทึกบ่อสีทั้งหมดประจำวันที่ {filter_date.strftime('%d/%m/%Y')}")
+        
+        # ปรับการทำ Format วันที่ให้สมบูรณ์สำหรับสืบค้นใน DB
         start_dt = f"{filter_date_str}T00:00:00"
         end_dt = f"{filter_date_str}T23:59:59"
+        
+        # ดึงข้อมูลใหม่ทุกครั้งที่ filter_date เปลี่ยนแปลง
         color_logs = (
             supabase.table("color_tank_logs")
             .select("*")
@@ -1191,42 +1195,39 @@ def show_data_editor():
         )
 
         if not color_logs:
-            st.warning("📅 ไม่มีบันทึกบ่อสีในวันที่เลือก")
+            st.warning(f"📅 ไม่มีบันทึกบ่อสีในวันที่ {filter_date.strftime('%d/%m/%Y')}")
         else:
             df_color = pd.DataFrame(color_logs)
             df_color["recorded_at"] = pd.to_datetime(df_color["recorded_at"]).dt.tz_convert(ICT)
             df_color["เวลา"] = df_color["recorded_at"].dt.strftime("%H:%M")
 
             # ----------------------------------------------------
-            # 🔴 เพิ่มส่วนตรวจสอบค่าเกินมาตรฐานและทำตัวหนังสือสีแดง
+            # 🔴 ส่วนตารางสรุปและการตรวจสอบแจ้งเตือนค่าเกินมาตรฐาน
             # ----------------------------------------------------
-            st.markdown("##### 📊 ตารางสรุปค่าบ่อสีของวันนี้ (ค่าที่ผิดปกติจะถูกเตือนเป็นตัวอักษรสีแดง)")
+            st.markdown("##### 📊 ตารางสรุปค่าบ่อสีของวันที่เลือก")
             
-            # ตัวอย่างการกำหนดเกณฑ์มาตรฐาน (สามารถปรับเปลี่ยนตัวเลข Min/Max ได้ตามจริง)
+            # เกณฑ์มาตรฐานบ่อสี (สามารถปรับตัวเลขให้ตรงกับหน้างานได้ครับ)
             COLOR_PH_MIN, COLOR_PH_MAX = 4.5, 6.5
             COLOR_TEMP_MIN, COLOR_TEMP_MAX = 20.0, 35.0
 
             has_warning = False
             warning_messages = []
 
-            # วนลูปตรวจสอบข้อมูลเพื่อสร้างลิสต์แจ้งเตือนตัวหนังสือสีแดง
             for idx, row in df_color.iterrows():
                 tank_name = row['tank_name_snapshot']
                 v_time = row['เวลา']
                 v_ph = float(row['ph_value'] or 0)
                 v_temp = float(row['temperature'] or 0)
 
-                # ตรวจสอบ pH
                 if v_ph < COLOR_PH_MIN or v_ph > COLOR_PH_MAX:
                     has_warning = True
-                    warning_messages.append(f"⚠️ บ่อสี <b>{tank_name}</b> เวลา <b>{v_time}</b>: ค่า pH ({v_ph}) เกินเกณฑ์มาตรฐาน ({COLOR_PH_MIN} - {COLOR_PH_MAX})")
+                    warning_messages.append(f"⚠️ บ่อสี <b>{tank_name}</b> เวลา <b>{v_time}</b>: ค่า pH ({v_ph}) ไม่อยู่ในเกณฑ์มาตรฐาน ({COLOR_PH_MIN} - {COLOR_PH_MAX})")
                 
-                # ตรวจสอบ Temperature
                 if v_temp < COLOR_TEMP_MIN or v_temp > COLOR_TEMP_MAX:
                     has_warning = True
-                    warning_messages.append(f"⚠️ บ่อสี <b>{tank_name}</b> เวลา <b>{v_time}</b>: ค่า Temp ({v_temp}°C) เกินเกณฑ์มาตรฐาน ({COLOR_TEMP_MIN} - {COLOR_TEMP_MAX}°C)")
+                    warning_messages.append(f"⚠️ บ่อสี <b>{tank_name}</b> เวลา <b>{v_time}</b>: ค่า Temp ({v_temp}°C) ไม่อยู่ในเกณฑ์มาตรฐาน ({COLOR_TEMP_MIN} - {COLOR_TEMP_MAX}°C)")
 
-            # แสดงตารางแบบภาพรวมของวันนั้นทั้งหมด
+            # แสดงตารางภาพรวมของวันนั้นทั้งหมดตาม Filter ปฏิทิน
             summary_color_df = df_color[["เวลา", "tank_name_snapshot", "ph_value", "temperature"]].rename(columns={
                 "tank_name_snapshot": "ชื่อบ่อสี",
                 "ph_value": "ค่า pH",
@@ -1234,24 +1235,27 @@ def show_data_editor():
             })
             st.dataframe(summary_color_df, use_container_width=True, hide_index=True)
 
-            # หากมีค่าใดเกินมาตรฐาน ให้แสดงข้อความเตือนเป็น "ตัวหนังสือสีแดง" ด้านล่างตาราง
+            # แจ้งเตือนตัวหนังสือสีแดง
             if has_warning:
-                st.markdown("<p style='color: #DC2626; font-weight: bold; margin-bottom: 5px;'>🚨 พบข้อมูลเกินเกณฑ์มาตรฐานด้านล่างนี้:</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color: #DC2626; font-weight: bold; margin-bottom: 5px;'>🚨 พบข้อมูลเกินเกณฑ์มาตรฐานประจำวัน:</p>", unsafe_allow_html=True)
                 for msg in warning_messages:
                     st.markdown(f"<div style='color: #DC2626; padding-left: 15px; font-size: 14px;'>{msg}</div>", unsafe_allow_html=True)
             else:
-                st.success("🟢 ค่าบ่อสีทุกบ่ออยู่ในเกณฑ์ปกติ")
+                st.success("🟢 ค่าบ่อสีทุกบ่ออยู่ในเกณฑ์มาตรฐานปกติ")
 
             st.markdown("---")
             st.subheader("✏️ แก้ไขข้อมูลรายบ่อสี")
-            # ===== ตัวเลือกสำหรับฟอร์มแก้ไข (คงเดิมตามระบบของคุณ) =====
+            
+            # ใส่คีย์เฉพาะเจาะจงผูกกับวันที่ เพื่อบังคับรีเฟรชตารางแก้ไขเมื่อเปลี่ยนวัน
             tank_list = sorted(df_color["tank_name_snapshot"].dropna().unique())
-            selected_tank = st.selectbox("เลือกบ่อที่ต้องการแก้ไขข้อมูล", tank_list, key="color_tank_filter")
+            selected_tank = st.selectbox(
+                "เลือกบ่อสีที่ต้องการแก้ไข", tank_list, key=f"color_tank_select_{filter_date_str}"
+            )
             tank_df = df_color[df_color["tank_name_snapshot"] == selected_tank].copy()
 
             for idx, row in tank_df.iterrows():
-                with st.expander(f"⏰ บ่อ: {row['tank_name_snapshot']} | เวลา {row['เวลา']}"):
-                    with st.form(f"edit_color_{idx}"):
+                with st.expander(f"⏰ เวลา {row['เวลา']} ({row['tank_name_snapshot']})"):
+                    with st.form(f"edit_color_form_{idx}"):
                         ph_value = st.number_input("pH", value=float(row["ph_value"] or 0), step=0.01, format="%.2f")
                         temperature = st.number_input("Temperature", value=float(row["temperature"] or 0), step=0.1, format="%.1f")
                         col1, col2 = st.columns(2)
@@ -1268,8 +1272,10 @@ def show_data_editor():
 
     with tab_chemical:
         st.subheader(f"🧪 บันทึกบ่อสารเคมีทั้งหมดประจำวันที่ {filter_date.strftime('%d/%m/%Y')}")
+        
         start_dt = f"{filter_date_str}T00:00:00"
         end_dt = f"{filter_date_str}T23:59:59"
+        
         chem_logs = supabase.table("anodize_tank_logs")\
             .select("*, tanks(tank_name)")\
             .gte("recorded_at", start_dt)\
@@ -1278,7 +1284,7 @@ def show_data_editor():
             .execute().data or []
 
         if not chem_logs:
-            st.warning("📅 ไม่มีบันทึกบ่อสารเคมีในวันที่เลือก")
+            st.warning(f"📅 ไม่มีบันทึกบ่อสารเคมีในวันที่ {filter_date.strftime('%d/%m/%Y')}")
         else:
             df_chem = pd.DataFrame(chem_logs)
             df_chem["recorded_at"] = pd.to_datetime(df_chem["recorded_at"]).dt.tz_convert(ICT)
@@ -1286,13 +1292,13 @@ def show_data_editor():
             df_chem["เวลา"] = df_chem["recorded_at"].dt.strftime("%H:%M")
 
             # ----------------------------------------------------
-            # 🔴 เพิ่มส่วนตรวจสอบค่าเกินมาตรฐานและทำตัวหนังสือสีแดง
+            # 🔴 ส่วนตารางสรุปและการตรวจสอบแจ้งเตือนค่าเกินมาตรฐาน
             # ----------------------------------------------------
-            st.markdown("##### 📊 ตารางสรุปค่าบ่อสารเคมีของวันนี้ (ค่าที่ผิดปกติจะถูกเตือนเป็นตัวอักษรสีแดง)")
+            st.markdown("##### 📊 ตารางสรุปค่าบ่อสารเคมีของวันที่เลือก")
             
-            # ตัวอย่างการกำหนดเกณฑ์มาตรฐานของบ่อเคมีทั่วไป
+            # เกณฑ์มาตรฐานทั่วไป (ปรับตั้งค่าตามมาตรฐานจริงของโรงงานได้เลยครับ)
             CHEM_PH_MIN, CHEM_PH_MAX = 1.0, 3.5
-            CHEM_TEMP_MIN, CHEM_TEMP_MAX = 15.0, 30.0
+            CHEM_TEMP_MIN, CHEM_TEMP_MAX = 15.0, 35.0
             CHEM_DEN_MIN, CHEM_DEN_MAX = 1.000, 1.150
 
             chem_warning = False
@@ -1305,24 +1311,29 @@ def show_data_editor():
                 v_temp = float(row['temperature'] or 0)
                 v_den = float(row['density'] or 0)
                 
-                # ตรวจว่าใช่บ่อ Seal/Sealer หรือไม่ (บ่อซีลจะละเว้นการเช็ค pH/Density ตามเงื่อนไขบ่อ)
+                # ตรวจเงื่อนไขว่าเป็นบ่อประเภทซีล (Seal / Sealer) หรือไม่
                 is_seal = "seal" in t_name.lower() or "sealer" in t_name.lower()
 
-                # เช็ค Temp (เช็คทุกบ่อ)
+                # บ่อทุกประเภทรวมถึงบ่อซีล ต้องถูกตรวจสอบ Temp
                 if v_temp < CHEM_TEMP_MIN or v_temp > CHEM_TEMP_MAX:
                     chem_warning = True
-                    chem_warning_messages.append(f"⚠️ บ่อเคมี <b>{t_name}</b> เวลา <b>{v_time}</b>: ค่า Temp ({v_temp}°C) เกินเกณฑ์มาตรฐาน ({CHEM_TEMP_MIN} - {CHEM_TEMP_MAX}°C)")
+                    chem_warning_messages.append(f"⚠️ บ่อเคมี <b>{t_name}</b> เวลา <b>{v_time}</b>: ค่า Temp ({v_temp}°C) ไม่อยู่ในเกณฑ์มาตรฐาน ({CHEM_TEMP_MIN} - {CHEM_TEMP_MAX}°C)")
 
-                # หากไม่ใช่บ่อซีล ให้ตรวจสอบ pH และ Density เพิ่มเติมด้วย
-                if not is_seal:
+                # ปรับตามเงื่อนไขใหม่: บ่อ Seal เก็บและเช็คเฉพาะ pH แล้ว (ส่วน Density ไม่ต้องเช็ค)
+                if is_seal:
                     if v_ph < CHEM_PH_MIN or v_ph > CHEM_PH_MAX:
                         chem_warning = True
-                        chem_warning_messages.append(f"⚠️ บ่อเคมี <b>{t_name}</b> เวลา <b>{v_time}</b>: ค่า pH ({v_ph}) เกินเกณฑ์มาตรฐาน ({CHEM_PH_MIN} - {CHEM_PH_MAX})")
+                        chem_warning_messages.append(f"⚠️ บ่อซีล <b>{t_name}</b> เวลา <b>{v_time}</b>: ค่า pH ({v_ph}) ไม่อยู่ในเกณฑ์มาตรฐาน ({CHEM_PH_MIN} - {CHEM_PH_MAX})")
+                else:
+                    # บ่อสารเคมีทั่วไป เช็คทั้ง pH และ Density
+                    if v_ph < CHEM_PH_MIN or v_ph > CHEM_PH_MAX:
+                        chem_warning = True
+                        chem_warning_messages.append(f"⚠️ บ่อเคมี <b>{t_name}</b> เวลา <b>{v_time}</b>: ค่า pH ({v_ph}) ไม่อยู่ในเกณฑ์มาตรฐาน ({CHEM_PH_MIN} - {CHEM_PH_MAX})")
                     if v_den < CHEM_DEN_MIN or v_den > CHEM_DEN_MAX:
                         chem_warning = True
-                        chem_warning_messages.append(f"⚠️ บ่อเคมี <b>{t_name}</b> เวลา <b>{v_time}</b>: ค่า ความหนาแน่น ({v_den}) เกินเกณฑ์มาตรฐาน ({CHEM_DEN_MIN} - {CHEM_DEN_MAX})")
+                        chem_warning_messages.append(f"⚠️ บ่อเคมี <b>{t_name}</b> เวลา <b>{v_time}</b>: ค่า ความหนาแน่น ({v_den}) ไม่อยู่ในเกณฑ์มาตรฐาน ({CHEM_DEN_MIN} - {CHEM_DEN_MAX})")
 
-            # แสดงตารางรวมบ่อสารเคมี
+            # แสดงตารางภาพรวมบ่อสารเคมีทั้งหมดของวันนั้น
             summary_chem_df = df_chem[["เวลา", "tank_name", "ph_value", "temperature", "density"]].rename(columns={
                 "tank_name": "ชื่อบ่อสารเคมี",
                 "ph_value": "ค่า pH",
@@ -1331,32 +1342,35 @@ def show_data_editor():
             })
             st.dataframe(summary_chem_df, use_container_width=True, hide_index=True)
 
-            # แสดงผลการแจ้งเตือนด้วย CSS สีแดงหากพบค่าผิดปกติ
+            # แจ้งเตือนตัวหนังสือสีแดง
             if chem_warning:
-                st.markdown("<p style='color: #DC2626; font-weight: bold; margin-bottom: 5px;'>🚨 พบข้อมูลเกินเกณฑ์มาตรฐานด้านล่างนี้:</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color: #DC2626; font-weight: bold; margin-bottom: 5px;'>🚨 พบข้อมูลเกินเกณฑ์มาตรฐานประจำวัน:</p>", unsafe_allow_html=True)
                 for msg in chem_warning_messages:
                     st.markdown(f"<div style='color: #DC2626; padding-left: 15px; font-size: 14px;'>{msg}</div>", unsafe_allow_html=True)
             else:
-                st.success("🟢 ค่าบ่อสารเคมีทุกบ่ออยู่ในเกณฑ์ปกติ")
+                st.success("🟢 ค่าบ่อสารเคมีทุกบ่ออยู่ในเกณฑ์มาตรฐานปกติ")
 
             st.markdown("---")
             st.subheader("✏️ แก้ไขข้อมูลรายบ่อสารเคมี")
-            # ===== ตัวเลือกสำหรับฟอร์มแก้ไข (คงเดิมตามระบบของคุณ) =====
+            
+            # ใส่คีย์เฉพาะเจาะจงผูกกับวันที่ เพื่อไม่ให้ดึงข้อมูลค้างสลับบ่อ
             chem_tanks = sorted(df_chem["tank_name"].dropna().unique())
-            selected_chem = st.selectbox("เลือกบ่อสารเคมีที่ต้องการแก้ไข", chem_tanks, key="chem_tank_filter")
+            selected_chem = st.selectbox(
+                "เลือกบ่อสารเคมีที่ต้องการแก้ไข", chem_tanks, key=f"chem_tank_select_{filter_date_str}"
+            )
             chem_df = df_chem[df_chem["tank_name"] == selected_chem].copy()
             is_sealer = ("seal" in selected_chem.lower() or "sealer" in selected_chem.lower())
 
             for idx, row in chem_df.iterrows():
-                with st.expander(f"⏰ บ่อ: {selected_chem} | เวลา {row['เวลา']}"):
-                    with st.form(f"edit_chem_{idx}"):
+                with st.expander(f"⏰ เวลา {row['เวลา']} ({selected_chem})"):
+                    with st.form(f"edit_chem_form_{idx}"):
                         ph_value = st.number_input("pH", value=float(row["ph_value"] or 0), step=0.01, format="%.2f")
                         temperature = st.number_input("Temperature", value=float(row["temperature"] or 0), step=0.1, format="%.1f")
                         
                         if not is_sealer:
                             density = st.number_input("Density", value=float(row["density"] or 0), step=0.001, format="%.3f")
                         else:
-                            density = 0.0
+                            density = 0.0  # บ่อซีลล็อกค่าความหนาแน่นไว้
 
                         col1, col2 = st.columns(2)
                         if col1.form_submit_button("💾 บันทึก"):
