@@ -1235,6 +1235,32 @@ def show_data_editor():
                 use_container_width=True,
                 hide_index=True
             )
+            st.markdown("### 📈 กราฟค่า pH")
+
+            graph_df = chem_df.sort_values("recorded_at")
+            
+            fig_ph = go.Figure()
+            
+            fig_ph.add_trace(
+                go.Scatter(
+                    x=graph_df["recorded_at"],
+                    y=graph_df["ph_value"],
+                    mode="lines+markers",
+                    name="pH"
+                )
+            )
+            
+            fig_ph.update_layout(
+                height=350,
+                xaxis_title="เวลา",
+                yaxis_title="pH",
+                hovermode="x unified"
+            )
+            
+            st.plotly_chart(
+                fig_ph,
+                use_container_width=True
+            )
     
             st.markdown("---")
             st.subheader("✏️ แก้ไขข้อมูล")
@@ -1337,27 +1363,16 @@ def show_data_editor():
             )
     
             # ===== ตาราง =====
-            if is_sealer:
-    
-                show_df = chem_df[[
-                    "เวลา",
-                    "temperature"
-                ]].rename(columns={
-                    "temperature": "Temp"
-                })
-    
-            else:
-    
-                show_df = chem_df[[
-                    "เวลา",
-                    "ph_value",
-                    "temperature",
-                    "density"
-                ]].rename(columns={
-                    "ph_value": "pH",
-                    "temperature": "Temp",
-                    "density": "Density"
-                })
+            show_df = chem_df[[
+                "เวลา",
+                "ph_value",
+                "temperature",
+                "density"
+            ]].rename(columns={
+                "ph_value": "pH",
+                "temperature": "Temp",
+                "density": "Density"
+            })
     
             st.dataframe(
                 show_df,
@@ -1381,33 +1396,29 @@ def show_data_editor():
                             format="%.1f"
                         )
     
-                        if not is_sealer:
-    
-                            ph_value = st.number_input(
-                                "pH",
-                                value=float(row["ph_value"] or 0),
-                                step=0.01,
-                                format="%.2f"
-                            )
-    
-                            density = st.number_input(
-                                "Density",
-                                value=float(row["density"] or 0),
-                                step=0.001,
-                                format="%.3f"
-                            )
+                        ph_value = st.number_input(
+                            "pH",
+                            value=float(row["ph_value"] or 0),
+                            step=0.01,
+                            format="%.2f"
+                        )
+                        
+                        density = st.number_input(
+                            "Density",
+                            value=float(row["density"] or 0),
+                            step=0.001,
+                            format="%.3f"
+                        )
     
                         col1, col2 = st.columns(2)
     
                         if col1.form_submit_button("💾 บันทึก"):
     
                             payload = {
-                                "temperature": temperature
+                                "temperature": temperature,
+                                "ph_value": ph_value,
+                                "density": density
                             }
-    
-                            if not is_sealer:
-                                payload["ph_value"] = ph_value
-                                payload["density"] = density
     
                             update_row(
                                 "anodize_tank_logs",
