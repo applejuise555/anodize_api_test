@@ -2169,41 +2169,43 @@ if menu == "บันทึกข้อมูลการผลิต":
                                 
                                     st.info("📌 งานนี้จะถูกบันทึกเป็น 'รอชุบ'")
                                 
+                               # =========================================================
+                                # 1. กรณียังไม่ลงบ่อ
                                 # =========================================================
-                                # สีใส
+                                if sel_c_new == "⏳ ยังไม่ลงบ่อสี":
+                                    
+                                    st.info("📌 งานนี้จะถูกบันทึกเป็น 'รอชุบ'")
+
                                 # =========================================================
-                                elif sel_c_new == "✨ สีใส (Clear)":
-                                
-                                    selected_tank_id = None
-                                    selected_tank_name = "Clear"
-                                    status_value = "processing"
-                                
-                                    st.success("✨ งานนี้จะถูกบันทึกเป็น สีใส (Clear)")
-                            
-                                # =========================================================
-                                # กรณีเลือกสีจริง
+                                # 2. กรณีเลือกสีจริง (รวมทั้งสีอื่นๆ เเละ สี Clear เข้าด้วยกัน)
                                 # =========================================================
                                 else:
-                            
+                                    # แปลงชื่อแสดงผล "✨ สีใส (Clear)" ให้กลายเป็นคำว่า "Clear" เพื่อเอาไปค้นหาในฐานข้อมูล
+                                    search_color_name = "Clear" if sel_c_new == "✨ สีใส (Clear)" else sel_c_new
+                                    
+                                    # ค้นหาบ่อที่คู่กับสีนี้ในระบบอัตโนมัติ
                                     filtered_tanks = {
                                         n: i
                                         for n, i in color_tanks_all.items()
-                                        if tank_color_map.get(n) == sel_c_new
+                                        if tank_color_map.get(n) == search_color_name
                                     }
-                            
+
                                     if filtered_tanks:
-                            
+                                        # ถ้ามีบ่อสีนี้ (เช่น มีบ่อ 40Clear ผูกกับคำว่า Clear อยู่) จะขึ้นสไลด์ช้อยส์ให้เลือกอัตโนมัติ
                                         sel_tank_name = st.selectbox(
                                             "เลือกบ่อสี",
                                             list(filtered_tanks.keys()),
                                             key="sel_t_log"
                                         )
-                            
+
                                         selected_tank_id = filtered_tanks[sel_tank_name]
                                         selected_tank_name = sel_tank_name
                                         status_value = "processing"
-                            
+
                                         render_color_bar(sel_tank_name)
+                                    else:
+                                        # กรณีที่ในตาราง tanks ลืมตั้งค่าสีรองรับ
+                                        st.warning(f"⚠️ ไม่พบข้อมูลบ่อสีที่รองรับสำหรับสี '{search_color_name}' ในระบบฐานข้อมูล")
                             
                                 # =========================================================
                                 # FORM
