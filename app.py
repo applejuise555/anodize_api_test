@@ -2363,7 +2363,7 @@ if menu == "บันทึกข้อมูลการผลิต":
                 pending_df["display"] = pending_df.apply(
                     lambda row: (
                         f"{product_map.get(row['product_id'], 'Unknown')} "
-                        f"| Jig: {jig_map.get(row['jig_id'],申-')}"
+                        f"| Jig: {jig_map.get(row['jig_id'], '-')}"
                         f"| Qty: {row.get('total_pieces',0)}"
                     ),
                     axis=1
