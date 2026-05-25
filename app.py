@@ -363,57 +363,57 @@ def render_tank_map(selected_tank_name=None):
 
         <!-- TOP ROW -->
 
-        <div class="tank" data-tank="5Black 1"
+        <div class="tank" data-tank="5Black"
             style="left:0px;top:0px;width:80px;height:80px;background:#111;">
             5.Black
         </div>
 
-        <div class="tank" data-tank="2.Red"
+        <div class="tank" data-tank="2Red"
             style="left:140px;top:0px;width:70px;height:80px;background:red;">
             2.Red
         </div>
 
-        <div class="tank" data-tank="3.Violet"
+        <div class="tank" data-tank="3Violet"
             style="left:210px;top:0px;width:60px;height:80px;background:purple;">
             3.Violet
         </div>
 
-        <div class="tank" data-tank="8.Green"
+        <div class="tank" data-tank="8Green"
             style="left:295px;top:0px;width:70px;height:80px;background:green;">
             8.Green
         </div>
 
-        <div class="tank" data-tank="17.Black"
+        <div class="tank" data-tank="17Black"
             style="left:365px;top:0px;width:65px;height:80px;background:#222;">
             17.Black
         </div>
 
-        <div class="tank" data-tank="15.Gold"
+        <div class="tank" data-tank="15Gold"
             style="left:455px;top:0px;width:70px;height:80px;background:#d4af00;color:black;">
             15.Gold
         </div>
 
-        <div class="tank" data-tank="9.Orange"
+        <div class="tank" data-tank="9Orange"
             style="left:525px;top:0px;width:65px;height:80px;background:orange;">
             9.Orange
         </div>
 
-        <div class="tank" data-tank="10.LightBlue"
+        <div class="tank" data-tank="10LightBlue"
             style="left:620px;top:0px;width:70px;height:80px;background:cyan;color:black;">
             10.Light Blue
         </div>
 
-        <div class="tank" data-tank="6.BananaLeafGreen"
+        <div class="tank" data-tank="6BananaLeafGreen"
             style="left:690px;top:0px;width:70px;height:80px;background:#7fff00;color:black;">
             6.Banana
         </div>
 
-        <div class="tank" data-tank="16.Blue"
+        <div class="tank" data-tank="16Blue"
             style="left:785px;top:0px;width:70px;height:80px;background:blue;">
             16.Blue
         </div>
 
-        <div class="tank" data-tank="4.DarkBlue"
+        <div class="tank" data-tank="4DarkBlue"
             style="left:855px;top:0px;width:65px;height:80px;background:darkblue;">
             4.Dark Blue
         </div>
@@ -442,48 +442,48 @@ def render_tank_map(selected_tank_name=None):
             AlmiteSealerLiquid
         </div>
 
-        <div class="tank" data-tank="20.Black"
+        <div class="tank" data-tank="20Black"
             style="left:270px;top:200px;width:80px;height:50px;background:#111;">
             20.Black
         </div>
 
-        <div class="tank" data-tank="1.DarkRed(spare)"
+        <div class="tank" data-tank="1.DarkRedB"
             style="left:270px;top:252px;width:80px;height:35px;background:darkred;">
-            1.DarkRed(spare)
+            1.DarkRedB
         </div>
 
-        <div class="tank vertical" data-tank="7.Pink"
+        <div class="tank vertical" data-tank="7Pink"
             style="left:380px;top:210px;width:85px;height:130px;background:magenta;">
             7.Pink
         </div>
 
-        <div class="tank" data-tank="HotSeal"
+        <div class="tank" data-tank="HotSealH60"
             style="left:540px;top:190px;width:85px;height:125px;background:#777;">
             HotSeal
         </div>
-        <div class="tank vertical" data-tank="11.Gold"
+        <div class="tank vertical" data-tank="11Gold"
             style="left:540px;top:320px;width:85px;height:125px;background:#d4af00;color:black;">
             11.Gold
         </div>
 
         <!-- RIGHT -->
 
-        <div class="tank" data-tank="1.DarkRed"
+        <div class="tank" data-tank="1DarkRedA"
             style="left:785px;top:200px;width:65px;height:55px;background:darkred;">
-            1.DarkRed
+            1.DarkRedA
         </div>
 
-        <div class="tank" data-tank="19.Copper"
+        <div class="tank" data-tank="19Copper"
             style="left:785px;top:257px;width:65px;height:55px;background:#d9a27f;color:black;">
-            19.Copper
+            19Copper
         </div>
 
-        <div class="tank" data-tank="12.Titanium"
+        <div class="tank" data-tank="12Titanium"
             style="left:785px;top:314px;width:65px;height:55px;background:#777;">
             12.Titanium
         </div>
 
-        <div class="tank" data-tank="14.RoseGold"
+        <div class="tank" data-tank="14RoseGold"
             style="left:785px;top:371px;width:65px;height:55px;background:plum;">
             14.RoseGold
         </div>
@@ -497,7 +497,7 @@ def render_tank_map(selected_tank_name=None):
 
         <!-- DARK TITANIUM -->
 
-        <div class="tank circle-tank" data-tank="13.DarkTitanium(spare)"
+        <div class="tank circle-tank" data-tank="13DarkTitanium"
             style="left:295px;top:110px;width:70px;height:70px;background:#666;">
             13.DarkTitanium
         </div>
@@ -508,7 +508,7 @@ def render_tank_map(selected_tank_name=None):
 
         <!-- ORANGE OIL -->
 
-        <div class="tank circle-tank" data-tank="18.OrangeOil"
+        <div class="tank circle-tank" data-tank="18OrangeOil"
             style="left:620px;top:110px;width:70px;height:70px;background:#dd6600;">
             18.OrangeOil
         </div>
