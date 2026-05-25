@@ -799,63 +799,78 @@ def show_data_editor():
                 id_inner = 0.0
             
                 # =====================================================
-                # สี่เหลี่ยม
+                # สี่เหลี่ยม (ทรงบล็อกสี่เหลี่ยมมุมฉาก)
+                # สูตรพื้นที่ผิวเดิม = 2*(กว้าง*ยาว + กว้าง*หนา + ยาว*หนา)
                 # =====================================================
-            
                 if shape == "สี่เหลี่ยม":
-            
+                
                     width = c2.number_input(
                         "กว้าง [mm]",
                         min_value=0.0,
                         value=float(p.get("width") or 0)
                     )
-            
+                
                     thickness = c2.number_input(
                         "สูง/หนา [mm]",
                         min_value=0.0,
                         value=float(p.get("thickness") or 0)
                     )
-            
-                    unit_volume = height * width * thickness
-            
+                
+                    # คำนวณพื้นที่ผิวรวมของกล่องสี่เหลี่ยม
+                    unit_surface_area = 2 * ((width * height) + (width * thickness) + (height * thickness))
+                
                 # =====================================================
                 # กระบอกทึบ
+                # สูตรพื้นที่ผิว = (2 * pi * r * h) + (2 * pi * r^2)
                 # =====================================================
-            
                 elif shape == "ทรงกระบอกทึบ":
-            
+                
                     od = c2.number_input(
                         "เส้นผ่านศูนย์กลาง (OD) [mm]",
                         min_value=0.0,
                         value=float(p.get("outer_diameter") or 0)
                     )
-            
-                    unit_volume = math.pi * ((od / 2) ** 2) * height
-            
+                
+                    r_outer = od / 2
+                    # พื้นที่ผิวข้าง + พื้นที่หน้าตัดหัวท้าย
+                    unit_surface_area = (2 * math.pi * r_outer * height) + (2 * math.pi * (r_outer ** 2))
+                
                 # =====================================================
-                # กระบอกกลวง
+                # กระบอกกลวง (เช่น ท่อ)
+                # สูตรพื้นที่ผิว = พื้นที่ผิวข้างนอก + พื้นที่ผิวข้างใน + พื้นที่หน้าตัดวงแหวนหัวท้าย 2 ฝั่ง
                 # =====================================================
-            
                 else:
-            
+                
                     od = c2.number_input(
                         "เส้นผ่านศูนย์กลาง (OD) [mm]",
                         min_value=0.0,
                         value=float(p.get("outer_diameter") or 0)
                     )
-            
+                
                     thickness = c2.number_input(
                         "ความหนาของเนื้อชิ้นงาน [mm]",
                         min_value=0.0,
                         value=float(p.get("thickness") or 0)
                     )
-            
+                
                     id_inner = max(0.0, od - (2 * thickness))
-            
-                    unit_volume = math.pi * (
-                        ((od / 2) ** 2)
-                        - ((id_inner / 2) ** 2)
-                    ) * height
+                    
+                    r_outer = od / 2
+                    r_inner = id_inner / 2
+                
+                    # 1. พื้นที่ผิวข้างนอก = 2 * pi * R * H
+                    side_outer = 2 * math.pi * r_outer * height
+                    # 2. พื้นที่ผิวข้างใน = 2 * pi * r * H
+                    side_inner = 2 * math.pi * r_inner * height
+                    # 3. พื้นที่หน้าตัดวงแหวนหัวท้าย 2 ด้าน = 2 * pi * (R^2 - r^2)
+                    base_rings = 2 * math.pi * ((r_outer ** 2) - (r_inner ** 2))
+                
+                    unit_surface_area = side_outer + side_inner + base_rings
+                
+                # =====================================================
+                # แสดงพื้นที่ผิวรวม
+                # =====================================================
+                st.info(f"💡 พื้นที่ผิวใหม่: {unit_surface_area:,.2f} mm²")
             
                 # =====================================================
                 # แสดงปริมาตร
