@@ -743,7 +743,8 @@ def show_data_editor():
                 shape_options = [
                     "สี่เหลี่ยม",
                     "ทรงกระบอกทึบ",
-                    "ทรงกระบอกกลวง"
+                    "ทรงกระบอกกลวง",
+                    "สี่เหลี่ยมกลวง (โดนัท)"
                 ]
             
                 if current_shape in shape_options:
@@ -1925,7 +1926,8 @@ if menu == "บันทึกข้อมูลการผลิต":
 
         with sub_prod:
             st.subheader("เพิ่มสินค้าใหม่ลงระบบ")
-            shape = st.selectbox("📐 เลือกรูปทรง", ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง"], key="shape_sel")
+            # 🌟 เพิ่มตัวเลือก "สี่เหลี่ยมโดนัท" ใน selectbox
+            shape = st.selectbox("📐 เลือกรูปทรง", ["สี่เหลี่ยม", "ทรงกระบอกทึบ", "ทรงกระบอกกลวง", "สี่เหลี่ยมโดนัท"], key="shape_sel")
             with st.form("add_prod_form_fixed", clear_on_submit=True):
                 c1, c2 = st.columns(2)
                 p_code = c1.text_input("รหัสสินค้า *")
@@ -1951,7 +1953,7 @@ if menu == "บันทึกข้อมูลการผลิต":
                     # สูตรพื้นที่ผิวทรงกระบอกทึบ: พื้นที่ผิวข้าง + พื้นที่หน้าตัดฝาบนล่าง 2 ฝั่ง
                     u_surf = (2 * math.pi * r_outer * height) + (2 * math.pi * (r_outer ** 2))
                     
-                else: # ทรงกระบอกกลวง
+                elif shape == "ทรงกระบอกกลวง":
                     od = c2.number_input("เส้นผ่านศูนย์กลาง (OD) [mm]", min_value=0.0)
                     thickness = c2.number_input("ความหนาของเนื้อชิ้นงาน [mm]", min_value=0.0)
                     id_inner = max(0.0, od - (2 * thickness))
@@ -1963,6 +1965,26 @@ if menu == "บันทึกข้อมูลการผลิต":
                     side_inner = 2 * math.pi * r_inner * height
                     base_rings = 2 * math.pi * ((r_outer ** 2) - (r_inner ** 2))
                     u_surf = side_outer + side_inner + base_rings
+
+                # 🌟 เพิ่มเงื่อนไข: สี่เหลี่ยมโดนัท (ประยุกต์ใช้คอลัมน์เดิมในการบันทึก)
+                elif shape == "สี่เหลี่ยมโดนัท":
+                    width = c2.number_input("ความกว้างภายนอก [mm]", min_value=0.0)
+                    thickness = c2.number_input("ความหนาของชิ้นงาน [mm]", min_value=0.0)
+                    
+                    # รับค่าภายในผ่านตัวแปรชั่วคราวบนหน้าฟอร์ม
+                    width_inner = c2.number_input("ความกว้างภายใน (รูเจาะ) [mm]", min_value=0.0)
+                    height_inner = c2.number_input("ความสูง/ยาวภายใน (รูเจาะ) [mm]", min_value=0.0)
+                    
+                    # Mapping ค่าไปเก็บในฟิลด์ที่กำหนดไว้ของวิธีที่ 2
+                    od = width_inner        # ใช้ outer_diameter เก็บกว้างใน
+                    id_inner = height_inner  # ใช้ inner_diameter เก็บสูงใน
+                    
+                    # สูตรคำนวณสี่เหลี่ยมโดนัท: (ผิวภายนอกกล่อง + ผิวภายในขอบรู) - หน้าตัดรูเจาะ 2 ด้าน
+                    surf_outer = 2 * ((width * height) + (width * thickness) + (height * thickness))
+                    surf_inner = 2 * ((width_inner * thickness) + (height_inner * thickness))
+                    hole_cut = 2 * (width_inner * height_inner)
+                    
+                    u_surf = surf_outer + surf_inner - hole_cut
 
                 # เปลี่ยนข้อความแสดงผลให้แสดงหน่วยพื้นที่ผิว (mm²)
                 st.info(f"💡 พื้นที่ผิวรวม: {u_surf:,.2f} mm²")
