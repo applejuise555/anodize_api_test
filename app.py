@@ -1298,7 +1298,7 @@ def show_data_editor():
                             update_row(
                                 "color_tank_logs",
                                 "id",
-                                row["id"],
+                                row["log_id"],
                                 {
                                     "ph_value": ph_value,
                                     "temperature": temperature
