@@ -224,7 +224,6 @@ def render_color__table(target_date_str):
         key=f"btn_csv_color_{target_date_str}"
     )
     # แสดงผลตารางผ่าน HTML เพื่อให้ CSS สีแดงทำงานได้
-    st.write(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
 
@@ -308,7 +307,6 @@ def render_chemical__table(target_date_str):
         mime="text/csv",
         key=f"btn_csv_chem_{target_date_str}"
     )
-    st.write(df_chem_display.to_html(escape=False, index=False), unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 #====================================================================================
 def render_tank_map(selected_tank_name=None):
