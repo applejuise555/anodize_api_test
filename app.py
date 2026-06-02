@@ -906,15 +906,15 @@ def show_data_editor():
 
         st.subheader(f"⚡ รายการบันทึกจิ๊กของวันที่ {filter_date.strftime('%d/%m/%Y')}")
 
+        # 🟢 โค้ดที่แก้ไขแล้ว: เพิ่มการกรองเวลาให้อยู่ในวันนั้น ๆ 
         logs = (
             supabase.table("jig_usage_log")
-            .select("*, products(product_code, product_name), jigs(jig_model_code)")
-            .gte("recorded_date", start_of_day)
-            .lte("recorded_date", end_of_day)
+            .select("*, products(product_code, product_name)")
+            .gte("recorded_date", start_of_day)  # ดักตั้งแต่เริ่มต้นวัน
+            .lte("recorded_date", end_of_day)    # ดักจนถึงสิ้นสุดวัน
             .order("recorded_date", desc=True)
             .execute()
-            .data
-            or []
+            .data or []
         )
 
         if not logs:
