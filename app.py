@@ -917,35 +917,45 @@ def show_data_editor():
             .data or []
         )
 
+        # === เริ่มต้นโค้ดที่วางทับเพื่อจัดระเบียบตัวเลือกกล่อง Selectbox ===
         if not logs:
-            st.warning(f"📅 ไม่มีข้อมูลบันทึกงานจิ๊กในวันที่ {filter_date}")
-
+            st.info(f"📅 ไม่มีบันทึกงานจิ๊กในวันที่ {filter_date.strftime('%d/%m/%Y')}")
         else:
             log_map = {}
             for l in logs:
-                dt_ict = datetime.fromisoformat(
-                    l.get("recorded_date").replace("Z", "+00:00")
-                ).astimezone(ICT)
+                # แปลงเวลา ISO format ให้เป็นเวลา Timezone ของไทย (+07:00) เพื่อนำมาโชว์บนหน้า UI
+                if l.get("recorded_date"):
+                    dt_ict = datetime.fromisoformat(
+                        l.get("recorded_date").replace("Z", "+00:00")
+                    ).astimezone(ICT)
+                    time_str = dt_ict.strftime("%H:%M")
+                else:
+                    time_str = "--:--"
 
-                time_str = dt_ict.strftime("%H:%M")
                 j_code = l.get("jigs", {}).get("jig_model_code", "N/A")
                 p_code = l.get("products", {}).get("product_code", "N/A")
+                t_pieces = l.get("total_pieces", 0)
 
-                label = f"⏰ {time_str} | จิ๊ก: {j_code} | สินค้าเดิม: {p_code}"
+                # สร้างข้อความ UI ตัวเลือกให้ละเอียดและอ่านง่าย
+                label = f"⏰ {time_str} | 🏗️ จิ๊ก: {j_code} | 📦 สินค้า: {p_code} | จำนวน: {t_pieces} ชิ้น"
                 log_map[label] = l
 
+            # สร้างกล่องเลือกรายการที่จะจัดการแก้ไข/ลบ
             selected_label = st.selectbox(
-                "เลือกรายการที่ต้องการจัดการ",
-                list(log_map.keys()),
+                "เลือกรายการบันทึกงานที่ต้องการจัดการ",
+                options=list(log_map.keys()),
                 key="edit_jiglog_sel"
             )
 
+            # ผูกค่ารายการที่เลือกลงในตัวแปร log หลักของระบบ
             log = log_map[selected_label]
 
+            # ค้นหา Primary Key อัตโนมัติ
             id_col, id_val = get_pk(
                 log,
                 ["log_id", "id", "jig_usage_log_id"]
             )
+        # === สิ้นสุดโค้ดที่นำมาวางทับ ===
 
             # =====================================================
             # โหลดสินค้า
