@@ -7,17 +7,97 @@ import plotly.graph_objects as go
 import math
 from plotly.subplots import make_subplots
 import time
-import streamlit as st
 from streamlit_javascript import st_javascript
 from streamlit_js_eval import streamlit_js_eval
 import streamlit.components.v1 as components
 import json
 
-# 1. ตั้งค่า Timezone (UTC +7)
+# ─── Timezone ────────────────────────────────────────────────────────────────
 ICT = timezone(timedelta(hours=7))
-st.set_page_config(page_title="Gissco Production Line and Dashboard", layout="wide")
+st.set_page_config(
+    page_title="Gissco Production Line and Dashboard",
+    layout="wide",
+    page_icon="🏭",
+)
 
-# --- Configuration ---
+# ─── Global Custom CSS ────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+}
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] .stRadio label,
+[data-testid="stSidebar"] .stSelectbox label {
+    color: #94a3b8 !important;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* ── Top-level titles ── */
+h1 { color: #0f172a !important; font-weight: 700 !important; }
+h2, h3 { color: #1e293b !important; font-weight: 600 !important; }
+
+/* ── Metric cards ── */
+[data-testid="stMetric"] {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+}
+[data-testid="stMetricLabel"] { font-size: 0.75rem; color: #64748b !important; }
+[data-testid="stMetricValue"] { font-size: 1.6rem; font-weight: 700; color: #1e293b !important; }
+
+/* ── Tab bar ── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 6px 6px 0 0;
+    padding: 0.45rem 1rem;
+    font-size: 0.83rem;
+    font-weight: 500;
+    color: #64748b;
+    background: transparent;
+}
+.stTabs [aria-selected="true"] {
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* ── Buttons ── */
+.stButton > button {
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all .15s ease;
+    border: none;
+}
+.stButton > button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* ── Dataframes ── */
+[data-testid="stDataFrame"] { border-radius: 8px; overflow: hidden; }
+
+/* ── Info / Success / Warning boxes ── */
+.stAlert { border-radius: 8px; }
+
+/* ── Download button ── */
+[data-testid="stDownloadButton"] > button {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-weight: 500;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ─── Color Hex Map ───────────────────────────────────────────────────────────
 COLOR_HEX_MAP = {
     # ===== COLOR TANK =====
     "Black": "#1E1E1E",
@@ -46,7 +126,7 @@ COLOR_HEX_MAP = {
     "RO": "#F3F4F6",          # เทาจางเกือบขาว
 }
 
-# --- เชื่อมต่อ Supabase ---
+# ─── Supabase Connection ─────────────────────────────────────────────────────
 @st.cache_resource
 def init_connection():
     try:
@@ -59,7 +139,7 @@ def init_connection():
 
 supabase = init_connection()
 
-# --- Helper Functions ---
+# ─── Helper Functions ────────────────────────────────────────────────────────
 def normalize_text(text):
     return str(text).lower().replace(" ", "").replace("_", "")
 
@@ -689,34 +769,21 @@ def tank_record_dialog(clicked_tank_name, color_tanks, chemical_tanks):
         )
 
 
-#=========================================================================
-def get_pk(row, candidates):
-    for col in candidates:
-        if col in row and row[col] is not None:
-            return col, row[col]
-    return None, None
+# ─── Database Helpers ────────────────────────────────────────────────────────
 
-def delete_row(table, id_col, id_val):
-    return supabase.table(table).delete().eq(id_col, id_val).execute()
-
-def update_row(table, id_col, id_val, payload):
-    return supabase.table(table).update(payload).eq(id_col, id_val).execute()
-
-# ================= 3. EDIT DATA (ปรับให้โชว์ รหัส + ชื่อสินค้า) =================
-# --- ฟังก์ชันเสริมสำหรับระบบจัดการข้อมูล (วางไว้ก่อน show_data_editor หรือรวมไว้ที่เดียวกัน) ---
-def get_pk(data, possible_keys):
-    """ช่วยหา primary key จากข้อมูลที่ดึงมา"""
+def get_pk(data: dict, possible_keys: list):
+    """Return the first matching primary key (column, value) from a data dict."""
     for key in possible_keys:
         if key in data:
             return key, data[key]
     return None, None
 
-def update_row(table, id_col, id_val, data):
-    """ฟังก์ชันกลางสำหรับอัปเดตข้อมูล"""
+def update_row(table: str, id_col: str, id_val, data: dict):
+    """Generic row update helper."""
     return supabase.table(table).update(data).eq(id_col, id_val).execute()
 
-def delete_row(table, id_col, id_val):
-    """ฟังก์ชันกลางสำหรับลบข้อมูล"""
+def delete_row(table: str, id_col: str, id_val):
+    """Generic row delete helper."""
     return supabase.table(table).delete().eq(id_col, id_val).execute()
 
 # ================= 3. EDIT DATA (เวอร์ชันอัปเกรดแยก Tab) =================
@@ -1364,9 +1431,22 @@ def show_data_editor():
                             st.rerun()
 
 #=================================================================   
-menu = st.sidebar.radio("เมนู", ["Dashboard","บันทึกข้อมูลการผลิต", "🛠️ จัดการและแก้ไขข้อมูล"])
+# ─── Sidebar Navigation ──────────────────────────────────────────────────────
+st.sidebar.markdown(
+    "<div style='padding:1rem 0 0.5rem; font-size:1.1rem; font-weight:700;"
+    " color:#f1f5f9; letter-spacing:0.03em;'>🏭 Gissco Production</div>",
+    unsafe_allow_html=True,
+)
+st.sidebar.markdown(
+    "<div style='height:1px; background:#334155; margin-bottom:1rem;'></div>",
+    unsafe_allow_html=True,
+)
+menu = st.sidebar.radio(
+    "Navigation",
+    ["📊 Dashboard", "📝 บันทึกข้อมูลการผลิต", "🛠️ จัดการและแก้ไขข้อมูล"],
+)
 
-if menu == "Dashboard":
+if menu == "📊 Dashboard":
     st.title("📊 Production Dashboard")
 
     # --- 1. Global Filter (Sidebar) ---
@@ -1698,7 +1778,7 @@ if menu == "Dashboard":
     else:
         st.caption("📅 ไม่มีข้อมูลบันทึกบ่อสีในวันที่และเวลาที่กำหนด")
 # ================= RECORD PAGE =================
-if menu == "บันทึกข้อมูลการผลิต":
+if menu == "📝 บันทึกข้อมูลการผลิต":
     st.title("📝 ระบบบันทึกข้อมูล (Interactive Map)")
 
     if "tank_read_round" not in st.session_state:
