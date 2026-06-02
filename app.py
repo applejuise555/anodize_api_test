@@ -989,8 +989,34 @@ def show_data_editor():
                 for t in tank_rows
                 if t.get("tank_name")
             ])
-            
 
+            # =====================================================
+            # FORM
+            # =====================================================
+            # เลือกสี (อยู่นอก form)
+            # =====================================================
+            
+            # 🛠️ แก้ไขจุดที่ 1: ดึงรายการตัวเลือกสีเดิมมาประกอบ ป้องกันปัญหาไม่มีสีเดิมในตัวเลือก
+            color_options = [
+                "Clear", "Black", "Red", "Blue", "Gold", 
+                "Green", "Orange", "Pink", "Titanium", "Dark Titanium"
+            ]
+            
+            # ดึงสีจาก snapshot เก่าใน Database
+            current_color = str(log.get("color") or "Clear").strip()
+            
+            # หากชื่อสีที่บันทึกอยู่ ไม่อยู่ในลิสต์เริ่มต้น ให้เพิ่มเข้าไปใน List ตัวเลือกทันทีเพื่อไม่ให้ระบบพัง
+            if current_color not in color_options:
+                color_options.append(current_color)
+            
+            color_index = color_options.index(current_color)
+            
+            selected_color_name = st.selectbox(
+                "เลือกสี",
+                color_options,
+                index=color_index,
+                key=f"color_select_{id_val}"
+            )
             # =====================================================
             # เลือกบ่อสี
             # =====================================================
