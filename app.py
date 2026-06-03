@@ -1540,6 +1540,14 @@ if menu == "📊 Dashboard":
         if alerts:
             alert_df = pd.DataFrame(alerts)
             st.dataframe(alert_df, hide_index=True, use_container_width=True, height=220)
+            csv_alerts = alert_df.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                label="📥 Export Alerts เป็น CSV",
+                data=csv_alerts,
+                file_name="alerts.csv",
+                mime="text/csv",
+                key=f"btn_csv_alerts_{id(alert_df)}"
+            )
         else:
             st.caption("✅ ทุกค่าอยู่ในเกณฑ์ปกติ")
 
@@ -1633,7 +1641,8 @@ if menu == "📊 Dashboard":
                     })
                 
                 # 🌟 แปลงตารางเป็น HTML และหุ้มด้วย div เพื่อให้สามารถเลื่อน Scroll เมาส์ได้ (ความสูงสูงสุด 260px) พร้อมคงหัวตารางตรึงไว้
-                html_table_a = pd.DataFrame(chem_rows).to_html(escape=False, index=False)
+                chem_rows_df = pd.DataFrame(chem_rows)
+                html_table_a = chem_rows_df.to_html(escape=False, index=False)
                 scrollable_table_a = f"""
                 <div style="max-height: 260px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 4px;">
                     <style>
@@ -1643,6 +1652,15 @@ if menu == "📊 Dashboard":
                 </div>
                 """
                 st.write(scrollable_table_a, unsafe_allow_html=True)
+                # 📥 ปุ่มดาวน์โหลด CSV ของตารางประวัติบ่อสารเคมี
+                csv_ano_hist = history_a_selected[["recorded_at", "tank_name", "ph_value", "temperature", "density"]].rename(columns={"recorded_at": "วันที่/เวลา", "tank_name": "ชื่อบ่อ", "ph_value": "pH", "temperature": "Temp", "density": "Density"}).to_csv(index=False).encode("utf-8-sig")
+                st.download_button(
+                    label="📥 Export ประวัติบ่อสารเคมีเป็น CSV",
+                    data=csv_ano_hist,
+                    file_name=f"anodize_history_{sel_ano}.csv",
+                    mime="text/csv",
+                    key=f"btn_csv_ano_hist_{sel_ano}"
+                )
             else:
                 st.caption("📅 ไม่มีข้อมูลประวัติในช่วงวันที่เลือก")
         
@@ -1731,7 +1749,8 @@ if menu == "📊 Dashboard":
             })
             
         # 🌟 แปลงตารางเป็น HTML และหุ้มด้วย div เพื่อให้สามารถเลื่อน Scroll เมาส์ได้ (ความสูงสูงสุด 350px) พร้อมคงหัวตารางตรึงไว้
-        html_table_c = pd.DataFrame(color_rows).to_html(escape=False, index=False)
+        color_rows_df = pd.DataFrame(color_rows)
+        html_table_c = color_rows_df.to_html(escape=False, index=False)
         scrollable_table_c = f"""
         <div style="max-height: 350px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 4px;">
             <style>
@@ -1741,6 +1760,15 @@ if menu == "📊 Dashboard":
         </div>
         """
         st.write(scrollable_table_c, unsafe_allow_html=True)
+        # 📥 ปุ่มดาวน์โหลด CSV ของตารางประวัติบ่อสีทั้งหมด
+        csv_color_hist = all_c_records[["recorded_at", "tank_name", "ph_value", "temperature"]].rename(columns={"recorded_at": "วันที่/เวลา", "tank_name": "ชื่อบ่อสี", "ph_value": "pH", "temperature": "Temp (°C)"}).to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            label="📥 Export ประวัติบ่อสีทั้งหมดเป็น CSV",
+            data=csv_color_hist,
+            file_name="color_tanks_history.csv",
+            mime="text/csv",
+            key="btn_csv_color_hist_all"
+        )
     else:
         st.caption("📅 ไม่มีข้อมูลบันทึกบ่อสีในวันที่และเวลาที่กำหนด")
 # ================= RECORD PAGE =================
