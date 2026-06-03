@@ -1790,7 +1790,8 @@ if menu == "📝 บันทึกข้อมูลการผลิต":
         font-weight: 700 !important;
         padding: 0.65rem 2rem !important;
         border-radius: 12px !important;
-        border: none !important;
+        border: 3px solid #ffffff !important;
+        outline: 3px solid #ef4444 !important;
         box-shadow: 0 4px 14px rgba(239,68,68,0.45) !important;
         letter-spacing: 0.03em;
         animation: pulse-btn 2s ease-in-out infinite;
