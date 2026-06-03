@@ -1781,7 +1781,36 @@ if menu == "📝 บันทึกข้อมูลการผลิต":
     if "open_tank_dialog" not in st.session_state:
         st.session_state["open_tank_dialog"] = False
     
-    if st.button("โหลดบ่อที่คลิก", key="load_clicked_tank_btn"):
+    st.markdown("""
+    <style>
+    .load-tank-btn > button {
+        background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%) !important;
+        color: white !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        padding: 0.65rem 2rem !important;
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 4px 14px rgba(239,68,68,0.45) !important;
+        letter-spacing: 0.03em;
+        animation: pulse-btn 2s ease-in-out infinite;
+    }
+    .load-tank-btn > button:hover {
+        filter: brightness(1.12) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 20px rgba(239,68,68,0.55) !important;
+    }
+    @keyframes pulse-btn {
+        0%   { box-shadow: 0 4px 14px rgba(239,68,68,0.45); }
+        50%  { box-shadow: 0 4px 22px rgba(239,68,68,0.75); }
+        100% { box-shadow: 0 4px 14px rgba(239,68,68,0.45); }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="load-tank-btn">', unsafe_allow_html=True)
+    clicked_load = st.button("🔔 โหลดบ่อที่คลิก", key="load_clicked_tank_btn", use_container_width=False)
+    st.markdown('</div>', unsafe_allow_html=True)
+    if clicked_load:
         st.session_state["tank_read_round"] += 1
         st.session_state["open_tank_dialog"] = True
     
