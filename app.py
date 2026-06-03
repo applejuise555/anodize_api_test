@@ -2454,13 +2454,27 @@ if menu == "📝 บันทึกข้อมูลการผลิต":
         
                 if st.button("🏁 ยืนยันเสร็จสิ้นงาน", use_container_width=True):
                     try:
-                        rows_to_close = active_df.head(close_count)
+                        rows_to_close = active_df.head(int(close_count))
                         jigs_to_refresh = set(int(row["jig_id"]) for _, row in rows_to_close.iterrows())
 
-                        # ===== Step 1: mark log เป็น finished และอัปเดต jig_status =====
+                        # Step 1: คำนวณยอดคงเหลือจาก active_df ที่มีอยู่แล้วในหน่วยความจำ
+                        # (ไม่ต้องเรียก DB เพิ่ม) — หักแถวที่กำลังจะปิดออก แล้วเขียน jigs ก่อนเลย
+                        closing_log_ids = set(int(row["log_id"]) for _, row in rows_to_close.iterrows())
+                        for target_jig_id in jigs_to_refresh:
+                            remain_rows = active_df[
+                                (active_df["jig_id"] == target_jig_id) &
+                                (~active_df["log_id"].isin(closing_log_ids))
+                            ]
+                            remain_pcs = int(remain_rows["total_pieces"].fillna(0).astype(int).sum())
+                            remain_vol = float(remain_rows["total_surface_area"].fillna(0).astype(float).sum())
+                            supabase.table("jigs").update({
+                                "total_pcs_in_jig": remain_pcs,
+                                "total_surface_area": remain_vol
+                            }).eq("jig_id", target_jig_id).execute()
+
+                        # Step 2: mark log เป็น finished + อัปเดต jig_status
                         for _, row in rows_to_close.iterrows():
                             current_jig_id = int(row["jig_id"])
-
                             supabase.table("jig_usage_log").update({
                                 "status": "finished"
                             }).eq("log_id", int(row["log_id"])).execute()
@@ -2472,28 +2486,10 @@ if menu == "📝 บันทึกข้อมูลการผลิต":
                                 "updated_at": datetime.now(ICT).isoformat()
                             }).execute()
 
-                        # ===== Step 2: ดึง log ที่ยังเหลืออยู่จริง แล้วอัปเดต jigs =====
-                        # ทำหลัง mark finished แล้ว — ดึง ALL non-finished logs ของแต่ละ jig
-                        for target_jig_id in jigs_to_refresh:
-                            remain_logs = (
-                                supabase.table("jig_usage_log")
-                                .select("total_pieces, total_surface_area")
-                                .eq("jig_id", target_jig_id)
-                                .neq("status", "finished")
-                                .execute()
-                                .data or []
-                            )
-                            remain_pcs = sum(int(x.get("total_pieces") or 0) for x in remain_logs)
-                            remain_vol = sum(float(x.get("total_surface_area") or 0) for x in remain_logs)
-                            supabase.table("jigs").update({
-                                "total_pcs_in_jig": remain_pcs,
-                                "total_surface_area": remain_vol
-                            }).eq("jig_id", target_jig_id).execute()
-
                         st.success(f"✅ ปิดงานสำเร็จ {int(close_count)} รายการ")
                         time.sleep(1)
                         st.rerun()
-        
+
                     except Exception as e:
                         st.error(f"ปิดงานไม่สำเร็จ: {e}")
 
